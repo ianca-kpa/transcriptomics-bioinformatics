@@ -33,7 +33,7 @@ while IFS= read -r run || [[ -n "$run" ]]; do
 
     fasterq-dump "$SRA_FILE" \
         --outdir "$FASTQ_DIR" \
-        --split-files \
+        --outfile "$run.fastq" \
         --threads 4
 
     echo "Converted: $run"
