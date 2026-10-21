@@ -12,7 +12,7 @@ STAR2IDX=${BASEDIR}/reference/star_index
 
 mkdir -p $WORKDIR
 
-for i in SRR3734796 SRR3734797 SRR3734798 SRR3734820 SRR3734824 SRR3734825
+for i in SRR3734796
 do
   echo "Aligning ${i}"
 
