@@ -18,3 +18,5 @@
 Log.out
 Log.progress.out
 Log.final.out
+
+results/
