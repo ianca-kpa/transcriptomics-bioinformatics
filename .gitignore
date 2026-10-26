@@ -1,5 +1,7 @@
-/documents
-/aulas
+
+# Documents and course materials
+/documents/
+/aulas/
 
 # Course data and private documentation
 /Module_I/data/
@@ -19,4 +21,5 @@ Log.out
 Log.progress.out
 Log.final.out
 
-/Modulo_I/results/
+# Large RNA-seq analysis results
+/Module_I/results
