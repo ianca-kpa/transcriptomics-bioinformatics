@@ -37,9 +37,9 @@ mkdir -p "${WORKDIR}/WithGeneNames"
 
 "${ADDSTRAND}" \
     "${ANNOT}" \
-    -r \ 
-    -i \ 
-    < "${WORKDIR}/WithGeneNames/psiclass_vote.gtf" \ 
+    -r \
+    -i \
+    < "${WORKDIR}/WithGeneNames/psiclass_vote.gtf" \
     > "${WORKDIR}/WithGeneNames/psiclass_vote.withStrand.gtf"  
 
 echo "PsiCLASS transcript annotation completed!"

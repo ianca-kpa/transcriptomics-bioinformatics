@@ -1,7 +1,6 @@
 
 #!/usr/bin/env bash
 set -euo pipefail
-module load cufflinks/2.2.1
 
 # Module I - Differential expression analysis with Cuffdiff2
 # Adapted from the Johns Hopkins University course
@@ -32,11 +31,11 @@ mkdir -p "$WORKDIR"
 # &>: Redirect standard output and errors to a log file
 
 cuffdiff \
-    -o "$WORKDIR" \ 
-    -p 2 \ 
-    "$ANNOT" \ 
-    "$CTRLBAMS" \ 
-    "$TESTBAMS" \ 
+    -o "$WORKDIR" \
+    -p 2 \
+    "$ANNOT" \
+    "$CTRLBAMS" \
+    "$TESTBAMS" \
     &> "${WORKDIR}/cuffdiff.log" 
 
 echo "Cuffdiff2 analysis completed!"
