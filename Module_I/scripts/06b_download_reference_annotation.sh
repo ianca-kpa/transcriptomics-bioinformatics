@@ -27,13 +27,13 @@ echo "Output directory: $ANNOTDIR"
 # ------------------------------------------------------------
 # 4. Download annotation
 # ------------------------------------------------------------
-
+# Check if the annotation file already exists and is not empty
 if [[ -s "$ANNOTATION" ]]; then
     echo "Annotation already exists. Skipping download."
 
 else
     echo "Downloading reference annotation..."
-
+    # Use wget with -c to continue partial downloads and -O to specify output filename
     wget -c "$URL" -O "${ANNOTATION}.gz"
 
     # Verify compressed file integrity
@@ -48,7 +48,7 @@ fi
 # ------------------------------------------------------------
 # 5. Verify annotation
 # ------------------------------------------------------------
-
+# Check if the annotation file exists and is not empty
 if [[ ! -s "$ANNOTATION" ]]; then
     echo "ERROR: Reference annotation is missing or empty." >&2
     exit 1

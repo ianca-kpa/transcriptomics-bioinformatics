@@ -17,6 +17,15 @@ do
   echo "Aligning ${i}"
 
   time \
+
+  # Run STAR alignment
+  # --runThreadN: Number of threads to use
+  # --genomeDir: Path to the STAR genome index
+  # --readFilesIn: Input FASTQ file
+  # --outSAMtype: Output format (BAM, sorted by coordinate)
+  # --outSAMstrandField: Include strand information in the output BAM
+  # --outFileNamePrefix: Prefix for output files
+  
   $STAR --runThreadN 2 --genomeDir $STAR2IDX/ \
         --readFilesIn $DATADIR/${i}.fastq \
         --outSAMtype BAM SortedByCoordinate --outSAMstrandField intronMotif \

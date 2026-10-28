@@ -23,7 +23,8 @@ while IFS= read -r run || [[ -n "$run" ]]; do
 
     echo "Downloading $run..."
 
-    prefetch "$run" -O "$SRA_DIR"
+    # Download the SRA run using prefetch and save it to the specified directory
+    prefetch "$run" -O "$SRA_DIR" 
 
     echo "Downloaded: $run"
 

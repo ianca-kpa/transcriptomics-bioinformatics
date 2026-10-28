@@ -13,8 +13,8 @@ METADATA_DIR="$PROJECT_DIR/metadata"
 INPUT_FILE="$METADATA_DIR/SraRunTable.csv"
 OUTPUT_FILE="$METADATA_DIR/run_id.txt"
 
-# Extract run IDs from the first column, skipping the header
-tail -n +2 "$INPUT_FILE" | cut -d',' -f1 > "$OUTPUT_FILE"
+# Extract run IDs from the first column, skipping the header and save to output file
+tail -n +2 "$INPUT_FILE" | cut -d',' -f1 > "$OUTPUT_FILE" 
 
 echo "Processing completed!"
 echo "Run IDs saved to: $OUTPUT_FILE"

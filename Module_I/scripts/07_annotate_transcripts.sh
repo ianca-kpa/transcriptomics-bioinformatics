@@ -23,16 +23,23 @@ ADDGENENAME="add-genename"
 # Add annotated gene names
 mkdir -p "${WORKDIR}/WithGeneNames"
 
+# Add gene names to the PsiCLASS GTF file using the reference annotation
 "${ADDGENENAME}" \
     "${ANNOT}" \
     "${WORKDIR}/psiclass_gtf.list" \
     -o "${WORKDIR}/WithGeneNames"
 
 # Add strand information using the reference annotation
+# -r: Reference annotation GTF file
+# -i: Input GTF file (PsiCLASS output)
+# <: Input redirection to read from the specified file
+# >: Output redirection to write to the specified file
+
 "${ADDSTRAND}" \
     "${ANNOT}" \
-    -r \
-    < "${WORKDIR}/WithGeneNames/psiclass_vote.gtf" \
-    > "${WORKDIR}/WithGeneNames/psiclass_vote.withStrand.gtf"
+    -r \ 
+    -i \ 
+    < "${WORKDIR}/WithGeneNames/psiclass_vote.gtf" \ 
+    > "${WORKDIR}/WithGeneNames/psiclass_vote.withStrand.gtf"  
 
 echo "PsiCLASS transcript annotation completed!"

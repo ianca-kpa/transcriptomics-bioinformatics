@@ -26,11 +26,13 @@ while IFS= read -r run || [[ -n "$run" ]]; do
     # Locate the downloaded SRA file
     SRA_FILE="$SRA_DIR/$run/$run.sra"
 
+    # Check if the SRA file exists
     if [[ ! -f "$SRA_FILE" ]]; then
         echo "ERROR: SRA file not found: $SRA_FILE" >&2
         exit 1
     fi
 
+    # Convert SRA to FASTQ using fasterq-dump
     fasterq-dump "$SRA_FILE" \
         --outdir "$FASTQ_DIR" \
         --outfile "$run.fastq" \
