@@ -195,4 +195,138 @@ The summary returned **265 significant genes**, **212 significant isoforms**, **
 - Compare the Cuffdiff2 results with **DESeq2** using an appropriate gene-level count matrix.
 - Decide which output tables and QC summaries are useful to keep as small reproducible examples in the GitHub repository.
 
+## Command reference — how the Bash analysis works
+
+I want to be able to reproduce these filters later, so I am keeping the commands and their explanations together. Unless indicated otherwise, I run them from `results/Cuffdiff/`.
+
+### The Cuffdiff command, argument by argument
+
+```bash
+cuffdiff \
+    -o "$WORKDIR" \
+    -p 2 \
+    "$ANNOT" \
+    "$CTRLBAMS" \
+    "$TESTBAMS" \
+    &> "${WORKDIR}/cuffdiff.log"
+```
+
+| Element | Meaning |
+|---|---|
+| `cuffdiff` | Run the Cuffdiff2 program. |
+| `-o "$WORKDIR"` | Output directory. Cuffdiff2 writes its result tables there. |
+| `-p 2` | Ask for two threads. It is not a memory limit. |
+| `"$ANNOT"` | The PsiCLASS GTF file defining transcript models. |
+| `"$CTRLBAMS"` | One comma-separated argument holding the three **Month 1** BAM paths. |
+| `"$TESTBAMS"` | One comma-separated argument holding the three **Month 4** BAM paths. |
+| `&>` | Redirect standard output **and** error messages to `cuffdiff.log` (Bash syntax). |
+
+The commas separate **replicates within a condition**; the spaces between `"$CTRLBAMS"` and `"$TESTBAMS"` separate the two conditions. I forgot that a backslash followed by a space does **not** continue a line: the backslash must be the last character before the newline.
+
+### Inspecting columns before filtering
+
+```bash
+head -n 1 gene_exp.diff | tr '\t' '\n' | nl -ba
+```
+
+- `head -n 1` reads only the header line.
+- `tr '\t' '\n'` replaces tab separators with line breaks, putting each column name on its own line.
+- `nl -ba` numbers all lines, starting at 1. This lets me match `$10` to `log2(fold_change)`, `$12` to `p_value` and `$14` to `significant` **in this particular file**.
+- In `awk`, `$10` means the **tenth field**, not ten dollars; `$0` means the **entire record/line**.
+
+### Counting test statuses
+
+```bash
+cut -f7 gene_exp.diff | sort | uniq -c
+```
+
+1. `cut -f7` extracts only the seventh **tab-separated** field (`status`).
+2. `sort` groups identical values together.
+3. `uniq -c` counts consecutive repetitions; this is why the `sort` step matters.
+4. The header `status` appears once and is not a biological result.
+
+### `awk` filters: significance and direction
+
+```bash
+awk -F '\t' '$14 == "yes" && $10 > 0' gene_exp.diff | wc -l
+```
+
+- `awk` processes one record at a time.
+- `-F '\t'` explicitly defines the field separator as a tab; this is more reliable for a TSV than the default whitespace splitting.
+- `$14 == "yes"` checks the significance flag. `==` is a **comparison**; it is not variable assignment.
+- `&&` means **AND**: both conditions must hold.
+- `$10 > 0` selects positive log2FC, so higher estimated expression in **Month 4 compared with Month 1**.
+- `wc -l` counts how many matching rows the preceding command printed.
+
+For downregulated results I change only `> 0` to `< 0`:
+
+```bash
+awk -F '\t' '$14 == "yes" && $10 < 0' gene_exp.diff | wc -l
+```
+
+A shortcut is `grep -c $'\tyes$' gene_exp.diff`, which counts lines ending with a tab followed by `yes`. It relies on the file format; selecting column 14 with `awk` is clearer when I need to combine conditions.
+
+### Combining p-value with a log2FC cutoff
+
+```bash
+awk -F '\t' '($10 < -0.5 || $10 > 0.5) && $12 < 0.05' gene_exp.diff | wc -l
+```
+
+- `||` means **OR**: I accept a large negative **or** a large positive change.
+- Parentheses group the two allowed log2FC directions.
+- `&& $12 < 0.05` additionally requires the **unadjusted** p-value to be below 0.05.
+- For a stricter effect-size threshold, replace `-0.5` and `0.5` with `-1` and `1`.
+
+I once typed `($10 <= 1 || $10 > 1)`. For numeric values, that condition covers everything (a value is either at most 1 or greater than 1), so I was effectively filtering only on p-value. The correct second condition is:
+
+```bash
+awk -F '\t' '($10 < -1 || $10 > 1) && $12 < 0.05' gene_exp.diff | wc -l
+```
+
+The result was **131**, while the ±0.5 filter returned **507**. These counts are *not* FDR-controlled findings because they use `p_value`, not `q_value`.
+
+### Sorting and previewing candidate genes
+
+```bash
+awk -F '\t' '$14 == "yes" && $7 == "OK"' gene_exp.diff \
+    | sort -k10,10nr \
+    | head -n 10
+```
+
+- `$7 == "OK"` restricts to records for which Cuffdiff2 reported a usable test.
+- `sort -k10,10nr` sorts numerically (`n`), in reverse (`r`, largest first), using field 10 as the key. With these tab-delimited output lines, this works because no field contains embedded spaces; to be explicit about tabs, `sort -t $'\t' -k10,10nr` is safer.
+- `head -n 10` shows only the first ten records.
+- Replace `-k10,10nr` by `-k10,10n` to see the most negative log2FC values first.
+
+Sorting by log2FC is exploratory. I should also inspect expression levels and adjusted p-values before choosing genes to investigate.
+
+### Saving filtered results and summaries
+
+```bash
+awk -F '\t' 'NR == 1 || ($14 == "yes" && $10 > 0)' gene_exp.diff > genes_upregulated.tsv
+```
+
+- `NR` is the current input record number; `NR == 1` preserves the header.
+- `>` **creates or overwrites** the output file. It will replace a previous `genes_upregulated.tsv`.
+- `>>` would append instead; I generally do **not** want it for a full filtered table because I might create duplicate results by rerunning the command.
+
+```bash
+./scripts/10_summarize_cuffdiff.sh | tee results/Cuffdiff/cuffdiff_summary.txt
+```
+
+- `./` runs the script relative to my current directory (this example assumes I am in `Module_I`, not inside `results/Cuffdiff/`).
+- `|` sends its displayed output to another command.
+- `tee` displays the output **and** saves it to a text file. By default, it overwrites the file; `tee -a` appends.
+- If I run a command from a different folder, I must adjust its relative file paths.
+
+### Checks I want to repeat before interpreting results
+
+```bash
+head -n 1 results/Cuffdiff/gene_exp.diff | tr '\t' '\n' | nl -ba
+cut -f7 results/Cuffdiff/gene_exp.diff | sort | uniq -c
+ls -lh results/Cuffdiff/gene_exp.diff
+```
+
+These commands are meant to run from `Module_I`. They check column order, test statuses and whether the result file exists. They do not prove that the experimental design is free of confounding factors: I still need to inspect sex metadata before interpreting the Month 1/Month 4 difference biologically.
+
 *Based on the Johns Hopkins University Coursera exercise, with local adaptations and results from my own run.*

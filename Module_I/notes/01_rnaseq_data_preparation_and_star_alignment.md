@@ -1,184 +1,332 @@
-# Module I — RNA-seq data preparation and STAR alignment
+# Module I — Differential expression with Cuffdiff2
 
 *Course: Bioinformatics Methods for Transcriptomics (Johns Hopkins University, Coursera)*  
-*Project: [transcriptomics-bioinformatics](https://github.com/ianca-kpa/transcriptomics-bioinformatics)*
+*Tool: Cuffdiff2 v2.2.1 (Debian package)*
 
-These are my notes from the first part of Module I. I followed the course exercises using Ubuntu in WSL2 and adapted the commands to my laptop. The main challenge was getting STAR's genome index to fit within the memory available to WSL. I kept the full sequencing files on my D: drive and the scripts and notes in the Git repository on C:.
+After aligning the six RNA-seq samples with STAR and assembling transcripts with PsiCLASS, I used Cuffdiff2 to compare the **1-month** and **4-month** mouse hippocampus samples. This note records the command I used, a couple of mistakes I had to fix, and the results I obtained. My next step is to try DESeq2 and compare the approaches.
 
-The six samples have since been aligned and used in PsiCLASS and Cuffdiff2. This note focuses on **data preparation and STAR**, rather than documenting every downstream step again.
+## Input data
 
-## Data used
-
-I worked with mouse hippocampus RNA-seq data from **GEO GSE83931**. The SRA metadata contains 30 runs; for the course exercise I selected these six single-end samples:
-
-| Group | SRA runs |
+| Group | Runs |
 |---|---|
-| 1 month | `SRR3734796`, `SRR3734797`, `SRR3734798` |
-| 4 months | `SRR3734820`, `SRR3734824`, `SRR3734825` |
+| Month 1 (first condition) | `SRR3734796`, `SRR3734797`, `SRR3734798` |
+| Month 4 (second condition) | `SRR3734820`, `SRR3734824`, `SRR3734825` |
 
-The age groups are the comparison used in the tutorial. Their sex composition may differ, so I should not attribute downstream expression differences entirely to age without checking the metadata.
-
-## Working environment and file organization
-
-- Ubuntu on WSL2, with about **10 GB RAM**, **8 GB swap**, and **8 processors** allocated to WSL.
-- STAR **2.7.11b** for alignment; SAMtools **1.22.1** for examining BAM files.
-- Conda environment: `transcriptomics`.
-- Repository: `/mnt/c/Users/ianca/Documentos/Bioinformatics/transcriptomics-bioinformatics/`.
-- Large data: `/mnt/d/Bioinformatics/transcriptomics-data/Module_I/`.
-
-I use symbolic links from `Module_I/data/` to the FASTQ and SRA directories on D:. `Module_I/results` also links to the results directory on D:. This keeps the repository small while letting the scripts refer to files through the project structure.
-
-To check where a link points:
-
-```bash
-ls -l data/
-readlink -f results
-```
-
-## 1. From SRA metadata to FASTQ
-
-I started with `metadata/SraRunTable.csv`. To inspect or extract the accession column, the useful Bash commands were:
-
-```bash
-# Skip the CSV header, then take its first field.
-tail -n +2 metadata/SraRunTable.csv | cut -d',' -f1 > metadata/run_id.txt
-
-wc -l metadata/run_id.txt
-head metadata/run_id.txt
-```
-
-I obtained **30 run accessions** and saved the six selected IDs in `metadata/selected_runs.txt`.
-
-The scripts for this part are:
+I used coordinate-sorted STAR BAMs from `results/STAR/BAM/` and the annotated PsiCLASS file:
 
 ```text
-scripts/01_extract_sra_accessions.sh
-scripts/02_download_sra.sh
-scripts/03_convert_sra_to_fastq.sh
+results/PsiCLASS/WithGeneNames/psiclass_vote.withStrand.gtf
 ```
 
-The main tools were `prefetch` for downloads and `fasterq-dump` for conversion:
+My output directory is `results/Cuffdiff/`, which points to the D: drive through the repository's `results` symbolic link.
+
+## Running Cuffdiff2
+
+I adapted the instructor's `com.cuffdiff` command in `scripts/09_run_cuffdiff.sh`. The central command is:
 
 ```bash
-# Example for one accession; check where prefetch saved the .sra file.
-prefetch SRR3734796 -O data/SRA/SRR3734796
-
-# Example of conversion from an existing SRA file.
-fasterq-dump data/SRA/SRR3734796/SRR3734796.sra \
-    --outdir data/FASTQ \
-    --threads 4
+cuffdiff \
+    -o "$WORKDIR" \
+    -p 2 \
+    "$ANNOT" \
+    "$CTRLBAMS" \
+    "$TESTBAMS" \
+    &> "${WORKDIR}/cuffdiff.log"
 ```
 
-I encountered a filename issue when `.sra` was included in some generated FASTQ names. I renamed those files instead of repeating the conversion. In the end, I had one `.fastq` per run (single-end sequencing), about **27 GB** in total.
+- `-o`: where to save the results.
+- `-p 2`: use two threads on my laptop.
+- `ANNOT`: PsiCLASS GTF annotation.
+- `CTRLBAMS` / `TESTBAMS`: comma-separated BAM paths, with three replicates in each group.
+- `&>`: save program messages and errors in the log file.
 
-I transferred large files to D: and checked the copies before using symbolic links. Keeping these files outside Git is important: FASTQ and BAM files are much larger than the scripts needed to reproduce the steps.
+The order matters: **Month 1 is the first condition and Month 4 is the second**, so a **positive log2 fold change** means higher estimated expression at 4 months.
 
-## 2. Reference genome
+### A Bash error I made
 
-The course refers to a mouse mm39 FASTA. I downloaded the public **GENCODE mouse M30 / GRCm39 primary assembly** reference rather than assuming I had the instructor's exact file.
+My first Cuffdiff2 runs returned:
+
+```text
+Error: cuffdiff requires at least 2 SAM files
+```
+
+I had accidentally left spaces after the `\` used to continue the command across lines. Bash was not passing all the arguments to Cuffdiff2. Removing those spaces fixed the command. A useful rule for me: **the backslash has to be the last character on the line**.
+
+I monitored the analysis with:
 
 ```bash
-REFDIR=/mnt/d/Bioinformatics/transcriptomics-data/Module_I/reference/genome
-mkdir -p "$REFDIR"
-cd "$REFDIR"
-
-wget -c https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M30/GRCm39.primary_assembly.genome.fa.gz
-
-gzip -t GRCm39.primary_assembly.genome.fa.gz
-gunzip -k GRCm39.primary_assembly.genome.fa.gz
+tail -f results/Cuffdiff/cuffdiff.log
+pgrep -af cuffdiff
 ```
 
-The uncompressed FASTA was approximately **2.6 GB**. I checked the chromosome names and saw the `chr` prefix (for example, `chr1` and `chr2`). This matters when querying genomic regions later.
+The program also warned that it could not contact its update server. That warning did not explain the earlier command error.
 
-## 3. Building the STAR index
+## Understanding `gene_exp.diff`
 
-This was the most difficult part of the preparation. Generating an index for the mouse reference required more memory than I could comfortably allocate. I used STAR's memory-saving index settings and two threads:
+This was the main output used in the course exercise. I checked the actual header rather than assuming which column contained each result:
 
 ```bash
-STAR --runThreadN 2 \
-    --runMode genomeGenerate \
-    --genomeDir /mnt/d/Bioinformatics/transcriptomics-data/Module_I/reference/star_index \
-    --genomeFastaFiles /mnt/d/Bioinformatics/transcriptomics-data/Module_I/reference/genome/GRCm39.primary_assembly.genome.fa \
-    --genomeSAsparseD 16 \
-    --genomeSAindexNbases 12
+head -n 1 gene_exp.diff | tr '\t' '\n' | nl -ba
 ```
 
-- `--runMode genomeGenerate`: build a genome index rather than align reads.
-- `--genomeDir`: where STAR writes the index.
-- `--genomeFastaFiles`: reference sequence used to build it.
-- `--genomeSAsparseD 16` and `--genomeSAindexNbases 12`: settings I changed to reduce index memory requirements.
+The file produced in my run has **14 columns**:
 
-The index completed successfully on **20 October 2026**, after roughly **28 minutes**. WSL used swap during the process, so I would not expect the same performance as on a computing cluster. I did **not** provide a GTF when building this STAR index; consequently, the STAR report showed zero *annotated* splice junctions in the splice-junction database.
+| Column | Field | What I used it for |
+|---:|---|---|
+| 1–4 | `test_id`, `gene_id`, `gene`, `locus` | Gene identifiers, name, genomic location |
+| 5–6 | `sample_1`, `sample_2` | Condition names (`q1`, `q2`) |
+| 7 | `status` | Whether the statistical test was performed |
+| 8–9 | `value_1`, `value_2` | Estimated abundance in each condition |
+| 10 | `log2(fold_change)` | Direction and size of the change |
+| 11 | `test_stat` | Test statistic |
+| 12 | `p_value` | Unadjusted p-value |
+| 13 | `q_value` | Multiple-testing-adjusted value |
+| 14 | `significant` | Cuffdiff2 `yes` / `no` flag |
 
-The command is kept in `scripts/04_generate_star_index.sh`.
+For this comparison, log2FC of **+1** corresponds to approximately twice the estimated expression at Month 4; **−1** corresponds to half the expression.
 
-## 4. Aligning reads with STAR
-
-I first tested STAR with `SRR3734796` before running the other samples. The essential alignment command was:
+## Checking the tests
 
 ```bash
-STAR --runThreadN 2 \
-    --genomeDir /mnt/d/Bioinformatics/transcriptomics-data/Module_I/reference/star_index \
-    --readFilesIn /mnt/d/Bioinformatics/transcriptomics-data/Module_I/FASTQ/SRR3734796.fastq \
-    --outSAMtype BAM SortedByCoordinate \
-    --outSAMstrandField intronMotif \
-    --outFileNamePrefix /mnt/d/Bioinformatics/transcriptomics-data/Module_I/results/STAR/SRR3734796_
+cut -f7 gene_exp.diff | sort | uniq -c
 ```
 
-This reads an uncompressed FASTQ, aligns it to the indexed genome, and writes a coordinate-sorted BAM. Because the input was not gzipped, I did not need the course's `--readFilesCommand zcat` option. I also avoided launching several memory-heavy STAR jobs simultaneously.
+This returned (excluding the header):
 
-The single-sample test succeeded. I then completed the remaining five alignments. The current BAM files are organized under `results/STAR/BAM/`, with splice-junction tables in `results/STAR/SpliceJunctions/` and logs kept separately. The scripts used for testing and running the six samples are `05a_test_star_alignment.sh` and `05b_align_all_samples_star.sh`.
-
-### Alignment result checked in detail: SRR3734796
-
-From `Log.final.out`:
-
-| Metric | Value |
+| Status | Records |
 |---|---:|
-| Input reads | 11,851,553 |
-| Uniquely mapped reads | 10,641,673 |
-| Uniquely mapped reads (%) | **89.79%** |
-| Reads mapped to multiple loci (%) | 6.96% |
-| Unmapped: too short (%) | 2.15% |
-| Mismatch rate per base (%) | 0.27% |
-| Splice-junction occurrences | 1,641,050 |
+| `OK` | 14,233 |
+| `NOTEST` | 59 |
+| `HIDATA` | 1 |
+| **Total** | **14,293** |
 
-The first alignment took about **30 minutes**. The unique mapping rate was encouraging, but it is only one part of alignment quality. I have not added a comparable quality-control table for all six samples to this note, because those six per-sample metrics have not yet been collected here.
+Not all records received a usable test. I use the `OK` status when reviewing individual results.
 
-A useful distinction: the splice count in the STAR report refers to occurrences supporting splicing in alignments, not that number of distinct introns.
+## Counting significant results
 
-## 5. Examining BAM files with SAMtools
-
-I used SAMtools to inspect BAM headers, check basic file structure, and create `.bai` indexes:
+The `significant` flag is in column 14, and log2FC is in column 10. I used these commands from the `results/Cuffdiff/` directory:
 
 ```bash
-BAM=results/STAR/BAM/SRR3734796_Aligned.sortedByCoord.out.bam
+# Significant gene records
+awk -F '\t' '$14 == "yes"' gene_exp.diff | wc -l
 
-/usr/bin/samtools quickcheck -v "$BAM"
-/usr/bin/samtools view -H "$BAM" | head
-/usr/bin/samtools index "$BAM"
+# Higher expression at Month 4
+awk -F '\t' '$14 == "yes" && $10 > 0' gene_exp.diff | wc -l
+
+# Lower expression at Month 4
+awk -F '\t' '$14 == "yes" && $10 < 0' gene_exp.diff | wc -l
+
+# Significant isoform records
+grep -c $'\tyes$' isoform_exp.diff
 ```
 
-A `.bam` contains aligned reads. A `.bam.bai` is a separate index for quickly retrieving alignments at a particular genomic location. `quickcheck` checks basic file structure; it does not inspect every alignment.
+My results:
 
-One practical issue I ran into later: an older `samtools` executable inside the `psiclass` Conda environment did not recognize `quickcheck`. The working SAMtools **1.22.1** executable was `/usr/bin/samtools`, so I used its full path where necessary.
+| Result | Count |
+|---|---:|
+| Significant gene records | **265** |
+| Upregulated at Month 4 | **63** |
+| Downregulated at Month 4 | **202** |
+| Significant isoform records | **212** |
 
-### Example locus: Gsn
+The directions add up: **63 + 202 = 265**. Gene-level and isoform-level counts are different quantities; 212 significant isoforms does not mean 212 of the 265 genes.
 
-The course also uses the mouse *Gsn* locus. A region can be inspected with:
+## Trying other log2FC cutoffs
+
+The instructor also showed how to combine an unadjusted p-value threshold with a minimum absolute log2FC:
 
 ```bash
-/usr/bin/samtools view -c \
-    results/STAR/BAM/SRR3734796_Aligned.sortedByCoord.out.bam \
-    'chr2:35146392-35197904'
+# p < 0.05 and |log2FC| > 0.5
+awk -F '\t' '($10 < -0.5 || $10 > 0.5) && $12 < 0.05' gene_exp.diff | wc -l
+
+# p < 0.05 and |log2FC| > 1
+awk -F '\t' '($10 < -1 || $10 > 1) && $12 < 0.05' gene_exp.diff | wc -l
 ```
 
-This counts alignment records overlapping the region, not necessarily unique biological molecules. I am keeping it as an inspection example, not claiming a particular count without its output.
+| Filter | My count |
+|---|---:|
+| p < 0.05 and \|log2FC\| > 0.5 | **507** |
+| p < 0.05 and \|log2FC\| > 1 | **131** |
 
-## Where this led next
+I initially made a mistake with the second filter: I wrote `$10 <= 1 || $10 > 1`, which covers essentially every numeric log2FC and returned **1,362** rows. The intended condition is `$10 < -1 || $10 > 1`, which selected **131**. That was a useful reminder to check logical conditions before interpreting a count.
 
-With the six BAM files available, I continued to **PsiCLASS** for transcript assembly and then **Cuffdiff2** for the Month 1 versus Month 4 comparison. Those steps have their own scripts and notes, including `notes/02_cuffdiff2_differential_expression.md`.
+These **p-value filters are exploratory**. They are not the same as selecting genes significant after multiple-testing correction with the Cuffdiff2 `q_value`/`significant` flag.
 
-What I want to improve next is a compact table of STAR quality metrics for **all six** samples, plus a closer look at splice-junction support. The metadata also needs attention before interpreting expression differences as age-related effects.
+## Looking at individual genes
 
-*Based on the Johns Hopkins University Coursera exercises, with commands adapted for my local WSL2 setup. These are notes from my practice, not an official course tutorial.*
+I sorted significant results by log2FC:
+
+```bash
+# Largest positive changes
+awk -F '\t' '$14 == "yes" && $7 == "OK"' gene_exp.diff | sort -k10,10nr | head -n 10
+
+# Largest negative changes
+awk -F '\t' '$14 == "yes" && $7 == "OK"' gene_exp.diff | sort -k10,10n | head -n 10
+```
+
+Some genes from the output:
+
+| Gene | log2FC | q-value |
+|---|---:|---:|
+| `Il33` | +1.84754 | 0.00508321 |
+| `Cd74` | +1.66516 | 0.00508321 |
+| `Serpinb1a` | +1.24378 | 0.00508321 |
+| `Eln` | −2.41140 | 0.00918258 |
+| `Col3a1` | −2.03349 | 0.00508321 |
+| `Enpp6` | −1.91252 | 0.00508321 |
+| `Gsn` | −1.71437 | 0.00508321 |
+| `Xist` | −1.70287 | 0.00508321 |
+
+I have not investigated these genes in detail yet. One result I want to check carefully is **Xist**, because its expression can be strongly related to sex. The selected groups may differ in sex composition, which complicates an age-only interpretation. This is a course comparison, not enough evidence on its own for a biological conclusion about development.
+
+## Keeping a short summary
+
+I created `scripts/10_summarize_cuffdiff.sh` so I would not need to type the counting commands every time. To print its output and save it:
+
+```bash
+./scripts/10_summarize_cuffdiff.sh | tee results/Cuffdiff/cuffdiff_summary.txt
+```
+
+The summary returned **265 significant genes**, **212 significant isoforms**, **63 upregulated genes**, **202 downregulated genes**, and **131 records** with p < 0.05 and |log2FC| > 1. Full results stay on D:, while the scripts and notes are versioned in Git.
+
+## What I want to do next
+
+- Check the sample metadata, particularly the sex of each animal.
+- Compare the Cuffdiff2 results with **DESeq2** using an appropriate gene-level count matrix.
+- Decide which output tables and QC summaries are useful to keep as small reproducible examples in the GitHub repository.
+
+## Command reference — how the Bash analysis works
+
+I want to be able to reproduce these filters later, so I am keeping the commands and their explanations together. Unless indicated otherwise, I run them from `results/Cuffdiff/`.
+
+### The Cuffdiff command, argument by argument
+
+```bash
+cuffdiff \
+    -o "$WORKDIR" \
+    -p 2 \
+    "$ANNOT" \
+    "$CTRLBAMS" \
+    "$TESTBAMS" \
+    &> "${WORKDIR}/cuffdiff.log"
+```
+
+| Element | Meaning |
+|---|---|
+| `cuffdiff` | Run the Cuffdiff2 program. |
+| `-o "$WORKDIR"` | Output directory. Cuffdiff2 writes its result tables there. |
+| `-p 2` | Ask for two threads. It is not a memory limit. |
+| `"$ANNOT"` | The PsiCLASS GTF file defining transcript models. |
+| `"$CTRLBAMS"` | One comma-separated argument holding the three **Month 1** BAM paths. |
+| `"$TESTBAMS"` | One comma-separated argument holding the three **Month 4** BAM paths. |
+| `&>` | Redirect standard output **and** error messages to `cuffdiff.log` (Bash syntax). |
+
+The commas separate **replicates within a condition**; the spaces between `"$CTRLBAMS"` and `"$TESTBAMS"` separate the two conditions. I forgot that a backslash followed by a space does **not** continue a line: the backslash must be the last character before the newline.
+
+### Inspecting columns before filtering
+
+```bash
+head -n 1 gene_exp.diff | tr '\t' '\n' | nl -ba
+```
+
+- `head -n 1` reads only the header line.
+- `tr '\t' '\n'` replaces tab separators with line breaks, putting each column name on its own line.
+- `nl -ba` numbers all lines, starting at 1. This lets me match `$10` to `log2(fold_change)`, `$12` to `p_value` and `$14` to `significant` **in this particular file**.
+- In `awk`, `$10` means the **tenth field**, not ten dollars; `$0` means the **entire record/line**.
+
+### Counting test statuses
+
+```bash
+cut -f7 gene_exp.diff | sort | uniq -c
+```
+
+1. `cut -f7` extracts only the seventh **tab-separated** field (`status`).
+2. `sort` groups identical values together.
+3. `uniq -c` counts consecutive repetitions; this is why the `sort` step matters.
+4. The header `status` appears once and is not a biological result.
+
+### `awk` filters: significance and direction
+
+```bash
+awk -F '\t' '$14 == "yes" && $10 > 0' gene_exp.diff | wc -l
+```
+
+- `awk` processes one record at a time.
+- `-F '\t'` explicitly defines the field separator as a tab; this is more reliable for a TSV than the default whitespace splitting.
+- `$14 == "yes"` checks the significance flag. `==` is a **comparison**; it is not variable assignment.
+- `&&` means **AND**: both conditions must hold.
+- `$10 > 0` selects positive log2FC, so higher estimated expression in **Month 4 compared with Month 1**.
+- `wc -l` counts how many matching rows the preceding command printed.
+
+For downregulated results I change only `> 0` to `< 0`:
+
+```bash
+awk -F '\t' '$14 == "yes" && $10 < 0' gene_exp.diff | wc -l
+```
+
+A shortcut is `grep -c $'\tyes$' gene_exp.diff`, which counts lines ending with a tab followed by `yes`. It relies on the file format; selecting column 14 with `awk` is clearer when I need to combine conditions.
+
+### Combining p-value with a log2FC cutoff
+
+```bash
+awk -F '\t' '($10 < -0.5 || $10 > 0.5) && $12 < 0.05' gene_exp.diff | wc -l
+```
+
+- `||` means **OR**: I accept a large negative **or** a large positive change.
+- Parentheses group the two allowed log2FC directions.
+- `&& $12 < 0.05` additionally requires the **unadjusted** p-value to be below 0.05.
+- For a stricter effect-size threshold, replace `-0.5` and `0.5` with `-1` and `1`.
+
+I once typed `($10 <= 1 || $10 > 1)`. For numeric values, that condition covers everything (a value is either at most 1 or greater than 1), so I was effectively filtering only on p-value. The correct second condition is:
+
+```bash
+awk -F '\t' '($10 < -1 || $10 > 1) && $12 < 0.05' gene_exp.diff | wc -l
+```
+
+The result was **131**, while the ±0.5 filter returned **507**. These counts are *not* FDR-controlled findings because they use `p_value`, not `q_value`.
+
+### Sorting and previewing candidate genes
+
+```bash
+awk -F '\t' '$14 == "yes" && $7 == "OK"' gene_exp.diff \
+    | sort -k10,10nr \
+    | head -n 10
+```
+
+- `$7 == "OK"` restricts to records for which Cuffdiff2 reported a usable test.
+- `sort -k10,10nr` sorts numerically (`n`), in reverse (`r`, largest first), using field 10 as the key. With these tab-delimited output lines, this works because no field contains embedded spaces; to be explicit about tabs, `sort -t $'\t' -k10,10nr` is safer.
+- `head -n 10` shows only the first ten records.
+- Replace `-k10,10nr` by `-k10,10n` to see the most negative log2FC values first.
+
+Sorting by log2FC is exploratory. I should also inspect expression levels and adjusted p-values before choosing genes to investigate.
+
+### Saving filtered results and summaries
+
+```bash
+awk -F '\t' 'NR == 1 || ($14 == "yes" && $10 > 0)' gene_exp.diff > genes_upregulated.tsv
+```
+
+- `NR` is the current input record number; `NR == 1` preserves the header.
+- `>` **creates or overwrites** the output file. It will replace a previous `genes_upregulated.tsv`.
+- `>>` would append instead; I generally do **not** want it for a full filtered table because I might create duplicate results by rerunning the command.
+
+```bash
+./scripts/10_summarize_cuffdiff.sh | tee results/Cuffdiff/cuffdiff_summary.txt
+```
+
+- `./` runs the script relative to my current directory (this example assumes I am in `Module_I`, not inside `results/Cuffdiff/`).
+- `|` sends its displayed output to another command.
+- `tee` displays the output **and** saves it to a text file. By default, it overwrites the file; `tee -a` appends.
+- If I run a command from a different folder, I must adjust its relative file paths.
+
+### Checks I want to repeat before interpreting results
+
+```bash
+head -n 1 results/Cuffdiff/gene_exp.diff | tr '\t' '\n' | nl -ba
+cut -f7 results/Cuffdiff/gene_exp.diff | sort | uniq -c
+ls -lh results/Cuffdiff/gene_exp.diff
+```
+
+These commands are meant to run from `Module_I`. They check column order, test statuses and whether the result file exists. They do not prove that the experimental design is free of confounding factors: I still need to inspect sex metadata before interpreting the Month 1/Month 4 difference biologically.
+
+*Based on the Johns Hopkins University Coursera exercise, with local adaptations and results from my own run.*
