@@ -27,7 +27,8 @@ do
     -@ 2 \
     -O BAM \
     -o "${i}.so.bam" \
-    "../STAR/BAM/${i}_Aligned.sortedByCoord.out.bam"
+    "../STAR/BAM/${i}_Aligned.sortedByCoord.out.bam" \
+    &> "${i}.sort.log"
 done
 
 # The variable {i} is used to represent the current sample name in the loop. 
