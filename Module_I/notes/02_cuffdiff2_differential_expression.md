@@ -329,4 +329,12 @@ ls -lh results/Cuffdiff/gene_exp.diff
 
 These commands are meant to run from `Module_I`. They check column order, test statuses and whether the result file exists. They do not prove that the experimental design is free of confounding factors: I still need to inspect sex metadata before interpreting the Month 1/Month 4 difference biologically.
 
+## Next Steps
+
+After the Cuffdiff2 analysis, I continued with DESeq2 to analyze differential gene expression using read counts.
+
+The next note covers BAM sorting, gene counting, DESeq2 normalization, gene name annotation, filtering, and the use of biological sex as a covariate.
+
+See [Note 3 — DESeq2 Differential Expression](03_deseq2_differential_expression.md).
+
 *Based on the Johns Hopkins University Coursera exercise, with local adaptations and results from my own run.*
