@@ -23,3 +23,10 @@ Log.final.out
 
 # Large RNA-seq analysis results
 /Module_I/results
+
+# R session files
+.RData
+.Rhistory
+
+# Generated count matrices
+raw_counts.*.csv

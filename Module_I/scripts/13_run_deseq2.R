@@ -1,270 +1,278 @@
 
-# Module I - Differential gene expression with DESeq2
-# Comparison: 1-month versus 4-month mouse hippocampus samples
-#
-# This script performs a differential expression analysis using DESeq2 to compare gene expression between 1-month-old and 4-month-old mouse hippocampus samples.
+# DESeq2 differential expression analysis
+# Comparison: 4 months vs 1 month
+# Annotation: PsiCLASS
 
-# Required packages for DESeq2 analysis
+# Required packages
 packages <- c(
     "DESeq2",
     "GenomicFeatures",
+    "txdbmaker",
     "Rsamtools",
     "GenomicAlignments",
     "EnhancedVolcano",
-    "txdbmaker"
+    "ggplot2"
 )
 
-# Check if each package is installed
 for (pkg in packages) {
-
-    if (!requireNamespace(pkg, quietly=TRUE)) {
-        stop(paste("Package not installed:", pkg))
+    if (!requireNamespace(pkg, quietly = TRUE)) {
+        stop(paste("Missing R package:", pkg))
     }
-
-    library(pkg, character.only=TRUE)
+    library(pkg, character.only = TRUE)
 }
 
 cat("All required R packages are available!\n")
 
-# --------------------------------------------------
-# 1. Input files
-# --------------------------------------------------
-
+# Directories
 BASEDIR <- "/mnt/d/Bioinformatics/transcriptomics-data/Module_I"
 
-# BAM files sorted by read name
 DATADIR <- file.path(BASEDIR, "results/Sorted")
+OUTDIR <- file.path(BASEDIR, "results/DESeq2")
+RESULTSDIR <- file.path(OUTDIR, "Results")
 
-# PsiCLASS transcript annotation
 ANNOT <- file.path(
     BASEDIR,
     "results/PsiCLASS/WithGeneNames/psiclass_vote.withStrand.gtf"
 )
 
-# Sample groups:
-# 1mo: SRR3734796, SRR3734797, SRR3734798
-# 4mo: SRR3734820, SRR3734824, SRR3734825
+PHENO <- file.path(OUTDIR, "pheno_1mo_4mo.csv")
 
-# List all BAM files
+dir.create(RESULTSDIR, recursive = TRUE, showWarnings = FALSE)
+
+# Check input files
+if (!file.exists(ANNOT)) {
+    stop("PsiCLASS annotation not found")
+}
+
+if (!file.exists(PHENO)) {
+    stop(paste("Metadata file not found:", PHENO))
+}
+
+# Find name-sorted BAM files
 fls <- list.files(
     DATADIR,
-    pattern="\\.bam$",
-    full.names=TRUE
+    pattern = "\\.so\\.bam$",
+    full.names = TRUE
 )
 
-# Check that exactly six BAM files were found
+fls <- sort(fls)
+
 stopifnot(length(fls) == 6)
+
 print(basename(fls))
 
-# Select the six BAM files
-fls_subset <- fls[1:6]
-
-# --------------------------------------------------
-# 2. Import gene annotation
-# --------------------------------------------------
-
-# Create a transcript database from the PsiCLASS GTF
+# Import PsiCLASS annotation
 hse <- txdbmaker::makeTxDbFromGFF(
     ANNOT,
-    format="gtf"
+    format = "gtf"
 )
 
-# Group exonic regions by gene
-exonsByGene <- exonsBy(hse, by="gene")
+exonsByGene <- exonsBy(hse, by = "gene")
 
-# --------------------------------------------------
-# 3. Count reads overlapping gene exons
-# --------------------------------------------------
-
-# Create a list of BAM files
+# Count reads overlapping genes
 bamLst <- BamFileList(
-    fls_subset,
-    yieldSize=100000
+    fls,
+    yieldSize = 100000
 )
-
-# Count reads assigned to each gene
-# singleEnd=TRUE: single-end sequencing data
-# ignore.strand=TRUE: count without strand specificity
-# fragments=FALSE: no paired-end fragment handling
 
 se <- summarizeOverlaps(
-    features=exonsByGene,
-    reads=bamLst,
-    mode="Union",
-    singleEnd=TRUE,
-    ignore.strand=TRUE,
-    fragments=FALSE
+    features = exonsByGene,
+    reads = bamLst,
+    mode = "Union",
+    singleEnd = TRUE,
+    ignore.strand = TRUE,
+    fragments = FALSE
 )
 
-# Use BAM filenames as sample identifiers
-colnames(se) <- basename(fls_subset)
+colnames(se) <- basename(fls)
 
-# Save raw gene counts
+# Export raw counts
 write.csv(
     assay(se),
-    file="raw_counts.1mo_4mo.psiclass.csv"
+    file.path(
+        RESULTSDIR,
+        "raw_counts.1mo_4mo.psiclass.csv"
+    )
 )
 
-# --------------------------------------------------
-# 4. Read sample metadata
-# --------------------------------------------------
+# Read sample metadata
+sampleInfo <- read.csv(
+    PHENO,
+    stringsAsFactors = FALSE
+)
 
-# Load sample information
-sampleInfo <- read.csv("pheno_1mo_4mo.csv")
-
-# Match BAM filenames with metadata
-seIdx <- match(colnames(se), sampleInfo$sampleID)
-
-# Check for missing, duplicated, or unexpected samples
-stopifnot(!anyNA(seIdx))
+stopifnot(all(c("sampleID", "condition") %in% names(sampleInfo)))
 stopifnot(!anyDuplicated(sampleInfo$sampleID))
+
+# Match metadata to BAM files
+seIdx <- match(
+    colnames(se),
+    sampleInfo$sampleID
+)
+
+stopifnot(!anyNA(seIdx))
 stopifnot(setequal(colnames(se), sampleInfo$sampleID))
 
-# Arrange metadata in the same order as the count matrix
-sampleInfo <- sampleInfo[seIdx, , drop=FALSE]
+sampleInfo <- sampleInfo[seIdx, , drop = FALSE]
 
-# Set the reference condition
 sampleInfo$condition <- factor(
     sampleInfo$condition,
-    levels=c("1mo", "4mo")
+    levels = c("1mo", "4mo")
 )
 
 stopifnot(!anyNA(sampleInfo$condition))
 
-# Add metadata to the count object
-colData(se) <- cbind(colData(se), sampleInfo)
-
-# Display sample information
-print(as.data.frame(colData(se)))
-
-# --------------------------------------------------
-# 5. Differential expression with DESeq2
-# --------------------------------------------------
+colData(se) <- cbind(
+    colData(se),
+    sampleInfo
+)
 
 # Create the DESeq2 dataset
 dds <- DESeqDataSet(
     se,
-    design=~ condition
+    design = ~ condition
 )
 
 # Set 1 month as the reference group
-dds$condition <- relevel(dds$condition, ref="1mo")
+dds$condition <- relevel(
+    dds$condition,
+    ref = "1mo"
+)
 
 # Run differential expression analysis
 dds <- DESeq(dds)
 
-# Display the available comparison
-print(resultsNames(dds))
-
-# Extract results: 4 months versus 1 month
+# Comparison: 4mo vs 1mo
 res <- results(
     dds,
-    contrast=c("condition", "4mo", "1mo")
+    contrast = c("condition", "4mo", "1mo")
 )
 
-# Filter results by p-value and adjusted p-value
-res_pval0.05 <- res[
-    which(res$pvalue <= 0.05),
+# Export normalized counts
+write.csv(
+    counts(dds, normalized = TRUE),
+    file.path(
+        RESULTSDIR,
+        "normalized_counts.1mo_4mo.psiclass.csv"
+    )
+)
+
+# Export all DESeq2 results
+res_df <- as.data.frame(res)
+
+write.csv(
+    res_df,
+    file.path(
+        RESULTSDIR,
+        "results_1mo_4mo.psiclass.csv"
+    )
+)
+
+# Filter by unadjusted p-value
+res_pval <- res_df[
+    !is.na(res_df$pvalue) &
+    res_df$pvalue <= 0.05,
+    ,
+    drop = FALSE
 ]
 
-res_qval0.05 <- res[
-    which(res$padj <= 0.05),
+write.csv(
+    res_pval,
+    file.path(
+        RESULTSDIR,
+        "results_1mo_4mo.pval05.psiclass.csv"
+    )
+)
+
+# Filter by adjusted p-value
+res_qval <- res_df[
+    !is.na(res_df$padj) &
+    res_df$padj <= 0.05,
+    ,
+    drop = FALSE
 ]
 
-# --------------------------------------------------
-# 6. Export results
-# --------------------------------------------------
-
-# Save normalized counts
 write.csv(
-    round(counts(dds, normalized=TRUE), digits=2),
-    file="normalized_counts.1mo_4mo.psiclass.csv"
+    res_qval,
+    file.path(
+        RESULTSDIR,
+        "results_1mo_4mo.qval05.psiclass.csv"
+    )
 )
-
-# Save results for all genes
-write.csv(
-    as.data.frame(res),
-    file="results_1mo_4mo.psiclass.csv"
-)
-
-# Save genes with p-value <= 0.05
-write.csv(
-    as.data.frame(res_pval0.05),
-    file="results_1mo_4mo.pval05.psiclass.csv"
-)
-
-# Save genes with adjusted p-value <= 0.05
-write.csv(
-    as.data.frame(res_qval0.05),
-    file="results_1mo_4mo.qval05.psiclass.csv"
-)
-
-# Print a summary of the results
-print(summary(res))
-
-cat("Genes with p-value <= 0.05:", nrow(res_pval0.05), "\n")
-cat("Genes with padj <= 0.05:", nrow(res_qval0.05), "\n")
-
-# --------------------------------------------------
-# 7. PCA visualization
-# --------------------------------------------------
 
 # Variance-stabilizing transformation
-vsd <- vst(dds, blind=TRUE)
+vsd <- vst(dds, blind = TRUE)
 
-# Save PCA plot
-png(
-    "PCA_1mo_4mo_byCondition.png",
-    width=720,
-    height=720
+# PCA plot
+pca_plot <- plotPCA(
+    vsd,
+    intgroup = "condition"
 )
 
-print(plotPCA(vsd, intgroup="condition"))
+ggsave(
+    filename = file.path(
+        OUTDIR,
+        "PCA_1mo_4mo_byCondition.png"
+    ),
+    plot = pca_plot,
+    width = 7,
+    height = 5,
+    dpi = 300
+)
 
-dev.off()
+# Export PCA coordinates
+pca <- prcomp(
+    t(assay(vsd))
+)
 
-# Calculate PCA coordinates
-vsd_mat <- assay(vsd)
-pca <- prcomp(t(vsd_mat))
+percentVar <- 100 * pca$sdev^2 / sum(pca$sdev^2)
 
-# Save PCA coordinates
+pca_table <- data.frame(
+    sampleID = rownames(pca$x),
+    condition = as.character(dds$condition),
+    PC1 = pca$x[, 1],
+    PC2 = pca$x[, 2],
+    row.names = NULL
+)
+
 write.csv(
-    pca$x,
-    file="1mo_4mo_pca_table.psiclass.csv"
+    pca_table,
+    file.path(
+        OUTDIR,
+        "1mo_4mo_pca_table.psiclass.csv"
+    ),
+    row.names = FALSE
 )
 
-print(summary(pca))
-
-# --------------------------------------------------
-# 8. Volcano plot
-# --------------------------------------------------
-
-# Use empty labels to avoid overcrowding
-gene_labels <- rep("", nrow(res))
-
+# Volcano plot
 png(
-    "volcano_1mo_4mo.psiclass.png",
-    width=720,
-    height=720
+    filename = file.path(
+        OUTDIR,
+        "volcano_1mo_4mo.psiclass.png"
+    ),
+    width = 1400,
+    height = 1100,
+    res = 150
 )
 
-myV <- EnhancedVolcano(
-    as.data.frame(res),
-    lab=gene_labels,
-    title="1mo_4mo.psiclass",
-    x="log2FoldChange",
-    y="padj",
-    pCutoff=0.05,
-    FCcutoff=1.5,
-    labSize=3.0,
-    titleLabSize=24,
-    cutoffLineWidth=0.2,
-    ylab=bquote(~-Log[10]~italic(Padj)),
-    xlim=c(-10, 10)
+print(
+    EnhancedVolcano(
+        res_df,
+        lab = rownames(res_df),
+        x = "log2FoldChange",
+        y = "padj",
+        pCutoff = 0.05,
+        FCcutoff = 1.5,
+        title = "DESeq2: 4mo vs 1mo",
+        subtitle = "PsiCLASS annotation"
+    )
 )
-
-print(myV)
 
 dev.off()
 
-cat("DESeq2 analysis completed!\n")
+# Summary
+cat("\nDESeq2 analysis completed!\n")
+cat("Total genes:", nrow(res_df), "\n")
+cat("Genes with p-value <= 0.05:", nrow(res_pval), "\n")
+cat("Genes with padj <= 0.05:", nrow(res_qval), "\n")
+cat("Results saved to:", RESULTSDIR, "\n")
