@@ -12,8 +12,8 @@ mkdir -p "${DATADIR}/star_index"
 # --runMode genomeGenerate: Generate genome index
 # --genomeDir: Directory to store the genome index
 # --genomeFastaFiles: Path to the genome FASTA file
-# --genomeSAsparseD: Sparse index parameter (default: 16)
-# --genomeSAindexNbases: Number of bases for the suffix array index (default
+# --genomeSAsparseD: Sparse index parameter
+# --genomeSAindexNbases: Number of bases for the suffix array index
 
 STAR --runThreadN 2 \
      --runMode genomeGenerate \

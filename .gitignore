@@ -1,4 +1,3 @@
-
 # Documents and course materials
 /documents/
 /aulas/
@@ -30,3 +29,17 @@ Log.final.out
 
 # Generated count matrices
 raw_counts.*.csv
+
+# Temporary files
+*.tmp
+
+# Final project data and generated outputs
+/Module_I/Final_Project/data_raw
+/Module_I/Final_Project/results
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Python cache files
+__pycache__/
+*.pyc
