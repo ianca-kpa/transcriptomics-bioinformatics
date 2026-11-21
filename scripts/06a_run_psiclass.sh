@@ -8,7 +8,7 @@ set -euo pipefail
 # ------------------------------------------------------------
 
 # 1. Project directories
-BASEDIR="/mnt/d/Bioinformatics/transcriptomics-data/Module_I"
+BASEDIR="/mnt/d/Bioinformatics/transcriptomics-data/Module_II"
 ALNDIR="${BASEDIR}/results/STAR/BAM"
 WORKDIR="${BASEDIR}/results/PsiCLASS"
 

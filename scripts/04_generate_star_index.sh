@@ -4,7 +4,7 @@ set -e
 
 ## STAR genome index generation
 
-DATADIR=/mnt/d/Bioinformatics/transcriptomics-data/Module_I/reference
+DATADIR=/mnt/d/Bioinformatics/transcriptomics-data/reference
 mkdir -p "${DATADIR}/star_index"
 
 # Generate STAR genome index

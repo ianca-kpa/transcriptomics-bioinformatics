@@ -10,7 +10,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 # Define paths
 SRA_DIR="$PROJECT_DIR/data/SRA"
 FASTQ_DIR="$PROJECT_DIR/data/FASTQ"
-RUN_LIST="$PROJECT_DIR/metadata/selected_runs.txt"
+RUN_LIST="$PROJECT_DIR/Module_II/metadata/selected_runs_m2.txt"
 
 # Create output directory
 mkdir -p "$FASTQ_DIR"
