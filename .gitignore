@@ -1,45 +1,63 @@
-# Documents and course materials
+
+# ==========================================
+# TRANSCRIPTOMICS PROJECT - GITIGNORE
+# ==========================================
+
+# External data directories and symlinks
+/data/
+/reference/
 /documents/
 /aulas/
 
-# Course data and private documentation
-/Module_I/data/
-/Module_I/docs/
-/Module_II/data/
-/Module_II/docs/
-/Module_III/data/
-/Module_III/docs/
-/Module_IV/data/
-/Module_IV/docs/
+# Local course materials
+/course_materials/
+/Module_II/docs/Transcriptomics-Mod2-Intro.pdf
 
-# Editor settings
-/.vscode/
+# Generated project results
+/Module_I/Final_Project/results-proj1/
 
-# STAR temporary and log files
+# Sequencing and alignment data
+*.sra
+*.fastq
+*.fastq.gz
+*.sam
+*.bam
+*.bai
+*.cram
+*.crai
+
+# Allow small educational FASTQ datasets
+!Module_I/Final_Project/data_raw/*.fastq.gz
+
+# Large archives and installers
+*.tar
+*.tar.gz
+*.vmdk
+*.exe
+*.mp4
+
+# Logs and temporary files
+*.log
 Log.out
-Log.progress.out
-Log.final.out
-
-# Large RNA-seq analysis results
-/Module_I/results
-
-# R session files
-.RData
-.Rhistory
-
-# Generated count matrices
-raw_counts.*.csv
-
-# Temporary files
 *.tmp
+*.temp
 
-# Final project data and generated outputs
-/Module_I/Final_Project/data_raw
-/Module_I/Final_Project/results
-
-# Jupyter notebook checkpoints
+# Jupyter
 .ipynb_checkpoints/
 
-# Python cache files
+# Python
 __pycache__/
 *.pyc
+.venv/
+
+# R
+.Rhistory
+.RData
+.Rproj.user/
+
+# Operating system
+.DS_Store
+Thumbs.db
+
+# Local machine-specific configuration
+/configs/paths.sh

@@ -42,16 +42,6 @@ cuffdiff \
 
 The order matters: **Month 1 is the first condition and Month 4 is the second**, so a **positive log2 fold change** means higher estimated expression at 4 months.
 
-### A Bash error I made
-
-My first Cuffdiff2 runs returned:
-
-```text
-Error: cuffdiff requires at least 2 SAM files
-```
-
-I had accidentally left spaces after the `\` used to continue the command across lines. Bash was not passing all the arguments to Cuffdiff2. Removing those spaces fixed the command. A useful rule for me: **the backslash has to be the last character on the line**.
-
 I monitored the analysis with:
 
 ```bash
