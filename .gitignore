@@ -40,6 +40,10 @@
 # Allow small educational FASTQ datasets
 !Module_I/Final_Project/data_raw/*.fastq.gz
 
+# Allow educational datasets from Module I Final Project
+!/Module_I/Final_Project/data_raw/
+!/Module_I/Final_Project/data_raw/*.fastq.gz
+
 # Large archives and installers
 *.tar
 *.tar.gz
