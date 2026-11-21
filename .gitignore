@@ -16,6 +16,17 @@
 # Generated project results
 /Module_I/Final_Project/results-proj1/
 
+# Local editor configuration
+/.vscode/
+
+# External data and reference symlinks
+/data
+/reference
+/Module_I/Final_Project/results-proj1
+
+# Local machine-specific configuration
+/configs/paths.sh
+
 # Sequencing and alignment data
 *.sra
 *.fastq
