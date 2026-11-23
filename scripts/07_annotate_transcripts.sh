@@ -2,44 +2,94 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Module I - Annotation of PsiCLASS transcript assemblies
+# Module I - Annotation of PsiCLASS transcripts
 # Adapted from the Johns Hopkins University course
 
-BASEDIR="/mnt/d/Bioinformatics/transcriptomics-data/Module_I"
-WORKDIR="${BASEDIR}/results/PsiCLASS"
+BASEDIR="/mnt/d/Bioinformatics/transcriptomics-data"
+WORKDIR="${BASEDIR}/PsiCLASS"
+OUTDIR="${WORKDIR}/WithGeneNames"
 
-# Reference gene annotation (to be downloaded/verified)
+PROJECT_DIR="/mnt/c/Users/ianca/Documentos/Bioinformatics/transcriptomics-bioinformatics"
+
+# Reference annotation
 ANNOT="${BASEDIR}/reference/annotation/gencode.vM30.annotation.gtf"
 
-# Course helper scripts (locations to verify)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+# Annotation tools
+ADDGENENAME="$(command -v add-genename || true)"
+ADDSTRAND="${PROJECT_DIR}/course_materials/Module_I/docs/add-strand"
 
-ADDSTRAND="${PROJECT_DIR}/docs/add-strand"
+# Verify required tools and files
+if [[ -z "$ADDGENENAME" ]]; then
+    echo "ERROR: add-genename not found. Activate the psiclass environment." >&2
+    exit 1
+fi
 
-# The add-genename executable must be located or installed.
-ADDGENENAME="add-genename"
+for file in \
+    "$ANNOT" \
+    "${WORKDIR}/psiclass_vote.gtf" \
+    "$ADDSTRAND"
+do
+    if [[ ! -s "$file" ]]; then
+        echo "ERROR: Missing or empty file: $file" >&2
+        exit 1
+    fi
+done
 
-# Add annotated gene names
-mkdir -p "${WORKDIR}/WithGeneNames"
+# Use temporary files to avoid overwriting valid outputs
+# if an annotation step fails.
+TMPDIR_ANNOT=$(mktemp -d "${WORKDIR}/.annotation_tmp.XXXXXX")
+trap 'rm -rf "$TMPDIR_ANNOT"' EXIT
 
-# Add gene names to the PsiCLASS GTF file using the reference annotation
-"${ADDGENENAME}" \
-    "${ANNOT}" \
-    "${WORKDIR}/psiclass_gtf.list" \
-    -o "${WORKDIR}/WithGeneNames"
+mkdir -p "${TMPDIR_ANNOT}/output" "$OUTDIR"
 
-# Add strand information using the reference annotation
-# -r: Reference annotation GTF file
-# -i: Input GTF file (PsiCLASS output)
-# <: Input redirection to read from the specified file
-# >: Output redirection to write to the specified file
+# Prepare GTF input list
+printf '%s\n' \
+    "${WORKDIR}/psiclass_vote.gtf" \
+    > "${TMPDIR_ANNOT}/psiclass_gtf.list"
 
-"${ADDSTRAND}" \
-    "${ANNOT}" \
+# Step 1 - Add gene names
+echo "Adding gene names..."
+
+"$ADDGENENAME" \
+    "$ANNOT" \
+    "${TMPDIR_ANNOT}/psiclass_gtf.list" \
+    -o "${TMPDIR_ANNOT}/output"
+
+ANNOTATED="${TMPDIR_ANNOT}/output/psiclass_vote.gtf"
+
+if [[ ! -s "$ANNOTATED" ]]; then
+    echo "ERROR: Gene annotation output is missing." >&2
+    exit 1
+fi
+
+# Step 2 - Add strand information
+echo "Processing strand information..."
+
+FINAL="${TMPDIR_ANNOT}/psiclass_vote.withStrand.gtf"
+
+"$ADDSTRAND" \
+    "$ANNOT" \
     -r \
-    -i \
-    < "${WORKDIR}/WithGeneNames/psiclass_vote.gtf" \
-    > "${WORKDIR}/WithGeneNames/psiclass_vote.withStrand.gtf"  
+    < "$ANNOTATED" \
+    > "$FINAL"
+
+if [[ ! -s "$FINAL" ]]; then
+    echo "ERROR: Strand annotation output is empty." >&2
+    exit 1
+fi
+
+# Step 3 - Validate chromosome names and GTF structure
+awk -F '\t' '
+!/^#/ {
+    if (NF != 9 || $1 ~ /^"",/ || $1 == "") {
+        print "ERROR: Invalid GTF record at line", NR > "/dev/stderr"
+        exit 1
+    }
+}' "$FINAL"
+
+# Step 4 - Replace previous annotation outputs
+mv -f "$ANNOTATED" "${OUTDIR}/psiclass_vote.gtf"
+mv -f "$FINAL" "${OUTDIR}/psiclass_vote.withStrand.gtf"
 
 echo "PsiCLASS transcript annotation completed!"
+echo "Final GTF: ${OUTDIR}/psiclass_vote.withStrand.gtf"

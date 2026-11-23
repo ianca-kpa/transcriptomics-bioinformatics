@@ -6,8 +6,10 @@
 # Positive log2FC: higher expression at Month 4
 # Negative log2FC: lower expression at Month 4
 
-FILE="results/Cuffdiff/gene_exp.diff"
-ISOFORM="results/Cuffdiff/isoform_exp.diff"
+BASEDIR="/mnt/d/Bioinformatics/transcriptomics-data"
+
+FILE="${BASEDIR}/Cuffdiff/gene_exp.diff"
+ISOFORM="${BASEDIR}/Cuffdiff/isoform_exp.diff"
 
 # Count significant genes and isoforms
 echo "Significant genes:"

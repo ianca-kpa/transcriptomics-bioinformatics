@@ -8,9 +8,9 @@ set -euo pipefail
 # ------------------------------------------------------------
 
 # 1. Project directories
-BASEDIR="/mnt/d/Bioinformatics/transcriptomics-data/Module_II"
-ALNDIR="${BASEDIR}/results/STAR/BAM"
-WORKDIR="${BASEDIR}/results/PsiCLASS"
+BASEDIR="/mnt/d/Bioinformatics/transcriptomics-data"
+ALNDIR="${BASEDIR}/STAR/BAM"
+WORKDIR="${BASEDIR}/PsiCLASS"
 
 # 2. Tools
 SAMTOOLS="/usr/bin/samtools"
@@ -67,9 +67,9 @@ cat "$BAMLIST"
 # Verify the expected number of samples
 N_SAMPLES=$(wc -l < "$BAMLIST")
 
-# Check if the number of samples is as expected (6 in this case)
-if [[ "$N_SAMPLES" -ne 6 ]]; then
-    echo "ERROR: Expected 6 BAM files, found $N_SAMPLES." >&2
+# Check if the number of samples is as expected (9 in this case)
+if [[ "$N_SAMPLES" -ne 9 ]]; then
+    echo "ERROR: Expected 9 BAM files, found $N_SAMPLES." >&2
     exit 1
 fi
 
@@ -96,7 +96,7 @@ while IFS= read -r bam; do
 
 done < "$BAMLIST"
 
-echo "All 6 BAM files passed basic validation."
+echo "All 9 BAM files passed basic validation."
 
 # ------------------------------------------------------------
 # 8. Transcript assembly with PsiCLASS

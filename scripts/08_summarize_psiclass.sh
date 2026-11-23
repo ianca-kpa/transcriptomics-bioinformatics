@@ -3,7 +3,7 @@
 # Module I - PsiCLASS assembly statistics
 
 # Input file
-GTF="/mnt/d/Bioinformatics/transcriptomics-data/Module_I/results/PsiCLASS/WithGeneNames/psiclass_vote.withStrand.gtf"
+GTF="/mnt/d/Bioinformatics/transcriptomics-data/PsiCLASS/WithGeneNames/psiclass_vote.withStrand.gtf"
 
 # Count unique genes
 echo "Number of genes:"

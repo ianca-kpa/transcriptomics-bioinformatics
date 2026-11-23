@@ -22,10 +22,7 @@ import csv
 # ------------------------------------------------------------
 
 # Directory containing the annotated PsiCLASS GTF file
-WORKDIR = Path(
-    "/mnt/d/Bioinformatics/transcriptomics-data/Module_I/"
-    "results/PsiCLASS/WithGeneNames"
-)
+WORKDIR = Path("/mnt/d/Bioinformatics/transcriptomics-data/PsiCLASS/WithGeneNames")
 
 # Input GTF file
 GTF = WORKDIR / "psiclass_vote.withStrand.gtf"
