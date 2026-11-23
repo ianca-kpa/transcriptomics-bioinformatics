@@ -10,7 +10,6 @@
 /aulas/
 
 # Local course materials
-/course_materials/
 /Module_II/docs/Transcriptomics-Mod2-Intro.pdf
 /Module_I/docs/
 
@@ -38,12 +37,11 @@
 *.cram
 *.crai
 
-# Allow small educational FASTQ datasets
-!Module_I/Final_Project/data_raw/*.fastq.gz
+# Allow educational FASTQ datasets in the reorganized course folder
+!/course_materials/Module_I/Final_Project/data_raw/*.fastq.gz
 
-# Allow educational datasets from Module I Final Project
-!/Module_I/Final_Project/data_raw/
-!/Module_I/Final_Project/data_raw/*.fastq.gz
+# Ignore generated results
+/course_materials/Module_I/Final_Project/results-proj1/
 
 # Large archives and installers
 *.tar
