@@ -43,6 +43,16 @@
 # Ignore generated results
 /course_materials/Module_I/Final_Project/results-proj1/
 
+# Course helper programs and supplementary materials
+/course_materials/Module_I/docs/
+/course_materials/Module_II/docs/
+
+# Local analysis results (directory or symbolic link)
+/course_materials/Module_I/Final_Project/results-proj1
+
+# Temporary validation script
+/scripts/psiclass_test
+
 # Large archives and installers
 *.tar
 *.tar.gz
