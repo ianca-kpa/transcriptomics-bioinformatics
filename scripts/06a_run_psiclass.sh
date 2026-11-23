@@ -8,9 +8,8 @@ set -euo pipefail
 # ------------------------------------------------------------
 
 # 1. Project directories
-BASEDIR="/mnt/d/Bioinformatics/transcriptomics-data"
-ALNDIR="${BASEDIR}/STAR/BAM"
-WORKDIR="${BASEDIR}/PsiCLASS"
+ALNDIR="$STAR_BAM_DIR"
+WORKDIR="$PSICLASS_DIR"
 
 # 2. Tools
 SAMTOOLS="/usr/bin/samtools"

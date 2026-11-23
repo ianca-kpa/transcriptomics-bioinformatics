@@ -5,16 +5,11 @@ set -euo pipefail
 # Module I - Annotation of PsiCLASS transcripts
 # Adapted from the Johns Hopkins University course
 
-BASEDIR="/mnt/d/Bioinformatics/transcriptomics-data"
-WORKDIR="${BASEDIR}/PsiCLASS"
+WORKDIR="$PSICLASS_DIR"
 OUTDIR="${WORKDIR}/WithGeneNames"
 
-PROJECT_DIR="/mnt/c/Users/ianca/Documentos/Bioinformatics/transcriptomics-bioinformatics"
+ANNOT="$REFERENCE_GTF"
 
-# Reference annotation
-ANNOT="${BASEDIR}/reference/annotation/gencode.vM30.annotation.gtf"
-
-# Annotation tools
 ADDGENENAME="$(command -v add-genename || true)"
 ADDSTRAND="${PROJECT_DIR}/course_materials/Module_I/docs/add-strand"
 

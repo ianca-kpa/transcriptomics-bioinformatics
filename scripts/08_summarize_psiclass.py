@@ -15,16 +15,34 @@
 from pathlib import Path
 from collections import defaultdict
 import csv
+import subprocess
 
 
 # ------------------------------------------------------------
 # 1. Define input and output paths
 # ------------------------------------------------------------
 
-# Directory containing the annotated PsiCLASS GTF file
-WORKDIR = Path("/mnt/d/Bioinformatics/transcriptomics-data/PsiCLASS/WithGeneNames")
+# Load project paths from the Bash configuration
+PROJECT_DIR = Path(__file__).resolve().parent.parent
+CONFIG = PROJECT_DIR / "configs" / "paths.sh"
 
-# Input GTF file
+result = subprocess.run(
+    [
+        "bash",
+        "-c",
+        'source "$1"; printf "%s" "$PSICLASS_DIR"',
+        "bash",
+        str(CONFIG),
+    ],
+    check=True,
+    capture_output=True,
+    text=True,
+)
+
+WORKDIR = Path(result.stdout)
+
+# Annotated PsiCLASS output
+WORKDIR = WORKDIR / "WithGeneNames"
 GTF = WORKDIR / "psiclass_vote.withStrand.gtf"
 
 # Output summary table (tab-separated values)

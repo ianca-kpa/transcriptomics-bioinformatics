@@ -6,12 +6,10 @@ set -euo pipefail
 # Adapted from the Johns Hopkins University course
 
 # Project directories
-BASEDIR="/mnt/d/Bioinformatics/transcriptomics-data"
-DATADIR="${BASEDIR}/STAR/BAM"
-WORKDIR="${BASEDIR}/Cuffdiff"
+DATADIR="$STAR_BAM_DIR"
+WORKDIR="$CUFFDIFF_DIR"
 
-# PsiCLASS transcript annotation
-ANNOT="${BASEDIR}/PsiCLASS/WithGeneNames/psiclass_vote.withStrand.gtf"
+ANNOT="${PSICLASS_DIR}/WithGeneNames/psiclass_vote.withStrand.gtf"
 
 # Control group: 1 month
 CTRLBAMS="${DATADIR}/SRR3734796_Aligned.sortedByCoord.out.bam,${DATADIR}/SRR3734797_Aligned.sortedByCoord.out.bam,${DATADIR}/SRR3734798_Aligned.sortedByCoord.out.bam"

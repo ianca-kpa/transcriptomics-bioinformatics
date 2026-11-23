@@ -4,10 +4,14 @@
 # External data directory
 BASEDIR="/path/to/transcriptomics-data"
 
-# Input and output directories
-DATADIR="${BASEDIR}/FASTQ"
-WORKDIR="${BASEDIR}/STAR"
-STAR2IDX="${BASEDIR}/reference/star_index"
+# Alignment files
+STAR_BAM_DIR="${BASEDIR}/STAR/BAM"
 
-# Executables
-STAR="STAR"
+# PsiCLASS outputs
+PSICLASS_DIR="${BASEDIR}/PsiCLASS"
+
+# Cuffdiff outputs
+CUFFDIFF_DIR="${BASEDIR}/Cuffdiff"
+
+# Reference annotation
+REFERENCE_GTF="${BASEDIR}/reference/annotation/gencode.vM30.annotation.gtf"
