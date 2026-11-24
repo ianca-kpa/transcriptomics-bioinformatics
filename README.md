@@ -1,6 +1,6 @@
 # Transcriptomics & Bioinformatics
 
-**RNA-seq | Transcript assembly | Differential expression | R | Bash | Reproducible workflows**
+**RNA-seq | Transcript assembly | Differential expression | R | Bash | Python | Reproducible workflows**
 
 This repository contains scripts, notebooks, and study notes from my practical work with the [Bioinformatics Methods for Transcriptomics](https://www.coursera.org/learn/bioinformatics-methods-for-transcriptomics) course, taught by Dr. Liliana Florea at Johns Hopkins University through Coursera.
 
