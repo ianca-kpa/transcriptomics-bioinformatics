@@ -6,11 +6,15 @@ set -euo pipefail
 
 STAR=STAR
 
-TXT="/mnt/c/Users/ianca/Documentos/Bioinformatics/transcriptomics-bioinformatics/Module_II/metadata/selected_runs_m2.txt"
-BASEDIR=/mnt/d/Bioinformatics/transcriptomics-data
-DATADIR=${BASEDIR}/FASTQ
-WORKDIR=${BASEDIR}/STAR
-STAR2IDX=${BASEDIR}/reference/star_index
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+source "${PROJECT_DIR}/configs/paths.sh"
+
+TXT="${PROJECT_DIR}/course_materials/Module_II/metadata/selected_runs_m2.txt"
+DATADIR="${BASEDIR}/FASTQ"
+WORKDIR="$STAR_DIR"
+STAR2IDX="$STAR_INDEX_DIR"
 
 # Create main output directory
 # mkdir -p "$WORKDIR"

@@ -1,6 +1,13 @@
 
 #!/usr/bin/env bash
+set -euo pipefail
+
 # Module I - PsiCLASS assembly statistics
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+source "${PROJECT_DIR}/configs/paths.sh"
 
 # Input file
 GTF="${PSICLASS_DIR}/WithGeneNames/psiclass_vote.withStrand.gtf"

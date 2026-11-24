@@ -2,15 +2,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Directories
-BASEDIR="/mnt/d/Bioinformatics/transcriptomics-data/Module_I"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-BAMDIR="${BASEDIR}/results/STAR/BAM"
-WORKDIR="${BASEDIR}/results/Visualization"
+source "${PROJECT_DIR}/configs/paths.sh"
+
+# Directories
+BAMDIR="$STAR_BAM_DIR"
+WORKDIR="${BASEDIR}/results-proj1/Visualization"
 
 # Annotation files
-P_ANNOT="${BASEDIR}/results/PsiCLASS/WithGeneNames/psiclass_vote.gtf"
-G_ANNOT="${BASEDIR}/reference/annotation/gencode.vM30.annotation.gtf"
+P_ANNOT="${PSICLASS_DIR}/WithGeneNames/psiclass_vote.gtf"
+G_ANNOT="$REFERENCE_GTF"
 
 mkdir -p "$WORKDIR"
 cd "$WORKDIR"

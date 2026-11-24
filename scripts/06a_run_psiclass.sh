@@ -8,6 +8,11 @@ set -euo pipefail
 # ------------------------------------------------------------
 
 # 1. Project directories
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+source "${PROJECT_DIR}/configs/paths.sh"
+
 ALNDIR="$STAR_BAM_DIR"
 WORKDIR="$PSICLASS_DIR"
 

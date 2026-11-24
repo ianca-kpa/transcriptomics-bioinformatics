@@ -1,15 +1,19 @@
 
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-BASEDIR=/mnt/d/Bioinformatics/transcriptomics-data/Module_I
-CMDDIR=/mnt/c/Users/ianca/Documentos/Bioinformatics/transcriptomics-bioinformatics/Module_I/docs
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-P_ANNOT=${BASEDIR}/results/PsiCLASS/WithGeneNames/psiclass_vote.withStrand.gtf
+source "${PROJECT_DIR}/configs/paths.sh"
+
+CMDDIR="${PROJECT_DIR}/course_materials/Module_I/docs"
+
+P_ANNOT="${PSICLASS_DIR}/WithGeneNames/psiclass_vote.withStrand.gtf"
 
 ADDGN=${CMDDIR}/add_gn_name
 
-WORKDIR=${BASEDIR}/results/DESeq2/Results
+WORKDIR="$DESEQ2_RESULTS_DIR"
 
 mkdir -p ${WORKDIR}/WithGeneNames
 

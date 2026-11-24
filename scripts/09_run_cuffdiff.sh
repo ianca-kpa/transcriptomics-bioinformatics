@@ -5,6 +5,11 @@ set -euo pipefail
 # Module I - Differential expression analysis with Cuffdiff2
 # Adapted from the Johns Hopkins University course
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+source "${PROJECT_DIR}/configs/paths.sh"
+
 # Project directories
 DATADIR="$STAR_BAM_DIR"
 WORKDIR="$CUFFDIFF_DIR"

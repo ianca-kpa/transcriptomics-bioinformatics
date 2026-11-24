@@ -4,8 +4,13 @@ set -e
 
 ## STAR genome index generation
 
-DATADIR=/mnt/d/Bioinformatics/transcriptomics-data/reference
-mkdir -p "${DATADIR}/star_index"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+source "${PROJECT_DIR}/configs/paths.sh"
+
+DATADIR="$(dirname "$(dirname "$STAR_INDEX_DIR")")"
+mkdir -p "$STAR_INDEX_DIR"
 
 # Generate STAR genome index
 # --runThreadN: Number of threads to use
@@ -17,8 +22,8 @@ mkdir -p "${DATADIR}/star_index"
 
 STAR --runThreadN 2 \
      --runMode genomeGenerate \
-     --genomeDir ${DATADIR}/star_index \
-     --genomeFastaFiles ${DATADIR}/genome/GRCm39.primary_assembly.genome.fa \
+     --genomeDir "$STAR_INDEX_DIR" \
+     --genomeFastaFiles "${BASEDIR}/reference/genome/GRCm39.primary_assembly.genome.fa" \
      --genomeSAsparseD 16 \
      --genomeSAindexNbases 12
 

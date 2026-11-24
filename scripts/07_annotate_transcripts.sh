@@ -5,6 +5,11 @@ set -euo pipefail
 # Module I - Annotation of PsiCLASS transcripts
 # Adapted from the Johns Hopkins University course
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+source "${PROJECT_DIR}/configs/paths.sh"
+
 WORKDIR="$PSICLASS_DIR"
 OUTDIR="${WORKDIR}/WithGeneNames"
 

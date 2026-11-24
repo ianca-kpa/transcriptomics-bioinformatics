@@ -1,9 +1,14 @@
 
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+source "${PROJECT_DIR}/configs/paths.sh"
 
 # Directory containing BAM files sorted by read name
-WORKDIR="/mnt/d/Bioinformatics/transcriptomics-data/Module_I/results/Sorted"
+WORKDIR="$SORTED_BAM_DIR"
 
 # Check all six samples
 for i in SRR3734796 SRR3734797 SRR3734798 SRR3734820 SRR3734824 SRR3734825

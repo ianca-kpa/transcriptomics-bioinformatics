@@ -25,15 +25,26 @@ for (pkg in packages) {
 cat("All required R packages are available!\n")
 
 # Directories
-BASEDIR <- "/mnt/d/Bioinformatics/transcriptomics-data/Module_I"
+script_args <- commandArgs(trailingOnly = FALSE)
+file_arg <- sub("^--file=", "", script_args[grepl("^--file=", script_args)])
+SCRIPT_DIR <- dirname(normalizePath(file_arg, mustWork = TRUE))
+PROJECT_DIR <- dirname(SCRIPT_DIR)
+config_file <- file.path(PROJECT_DIR, "configs", "paths.sh")
 
-DATADIR <- file.path(BASEDIR, "results/Sorted")
-OUTDIR <- file.path(BASEDIR, "results/DESeq2")
+BASELINE <- system2(
+    "bash",
+    c("-c", sprintf('source "%s"; printf %%s "$BASEDIR"', config_file)),
+    stdout = TRUE
+)
+BASEDIR <- paste(BASELINE, collapse = "")
+
+DATADIR <- file.path(BASEDIR, "results-proj1/Sorted")
+OUTDIR <- file.path(BASEDIR, "results-proj1/DESeq2")
 RESULTSDIR <- file.path(OUTDIR, "Results")
 
 ANNOT <- file.path(
     BASEDIR,
-    "results/PsiCLASS/WithGeneNames/psiclass_vote.withStrand.gtf"
+    "PsiCLASS/WithGeneNames/psiclass_vote.withStrand.gtf"
 )
 
 # Metadata including biological sex

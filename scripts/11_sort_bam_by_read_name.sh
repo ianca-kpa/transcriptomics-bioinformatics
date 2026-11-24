@@ -1,10 +1,15 @@
 
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+source "${PROJECT_DIR}/configs/paths.sh"
 
 # Input and output directories
-DATADIR="/mnt/d/Bioinformatics/transcriptomics-data/Module_I/results/STAR/BAM"
-WORKDIR="/mnt/d/Bioinformatics/transcriptomics-data/Module_I/results/Sorted"
+DATADIR="$STAR_BAM_DIR"
+WORKDIR="$SORTED_BAM_DIR"
 
 mkdir -p "$WORKDIR"
 cd "$WORKDIR"

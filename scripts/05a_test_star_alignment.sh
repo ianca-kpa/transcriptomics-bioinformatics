@@ -5,10 +5,14 @@ set -euo pipefail
 
 STAR=STAR
 
-BASEDIR=/mnt/d/Bioinformatics/transcriptomics-data/Module_I
-DATADIR=${BASEDIR}/FASTQ
-WORKDIR=${BASEDIR}/results/STAR
-STAR2IDX=${BASEDIR}/reference/star_index
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+source "${PROJECT_DIR}/configs/paths.sh"
+
+DATADIR="${BASEDIR}/FASTQ"
+WORKDIR="${STAR_DIR}"
+STAR2IDX="$STAR_INDEX_DIR"
 
 mkdir -p $WORKDIR
 

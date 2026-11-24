@@ -2,9 +2,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+source "${PROJECT_DIR}/configs/paths.sh"
+
 # Directories
-BASEDIR="/mnt/d/Bioinformatics/transcriptomics-data/Module_I"
-WORKDIR="${BASEDIR}/results/DESeq2/Results"
+WORKDIR="$DESEQ2_RESULTS_DIR"
 
 INPUT="${WORKDIR}/WithGeneNames/gn_results_1mo_4mo.psiclass.csv"
 OUTPUT="${WORKDIR}/deseq_filter_summary.csv"
