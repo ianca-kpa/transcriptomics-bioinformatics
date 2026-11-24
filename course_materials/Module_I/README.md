@@ -177,4 +177,4 @@ This repository is based on [Bioinformatics Methods for Transcriptomics](https:/
 
 ## Back to the Repository
 
-[Main repository README](../README.md)
+[Main repository README](../../README.md)
