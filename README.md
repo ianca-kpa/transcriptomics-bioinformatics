@@ -16,7 +16,7 @@ Sequencing files and large generated results are stored separately from Git. My 
 
 | Module | Topic | Progress |
 |---|---|---|
-| [Module I](Module_I/README.md) | RNA-seq preparation, STAR alignment, PsiCLASS assembly, Cuffdiff2, and DESeq2 | Initial analyses completed; final-project notebook available; verification items remain |
+| [Module I](course_materials/Module_I/README.md) | RNA-seq preparation, STAR alignment, PsiCLASS assembly, Cuffdiff2, and DESeq2 | Initial analyses completed; final-project notebook available; verification items remain |
 | Later modules | Alternative splicing and long-read transcriptomics | Not yet documented |
 
 ## Work completed in Module I
@@ -33,11 +33,11 @@ In the initial DESeq2 model (`~ condition`), **271 genes** had `padj ≤ 0.05` o
 
 The six samples are not balanced by sex: the 1-month group contains three females, whereas the 4-month group contains one female and two males. This limits how confidently the differences can be attributed to age. A second DESeq2 script includes sex in the design, but its output remains pending verification.
 
-For the dataset, methods, script list, results, and limitations, see **[Module I — Workflow and Results](Module_I/README.md)**.
+For the dataset, methods, script list, results, and limitations, see **[Module I — Workflow and Results](course_materials/Module_I/README.md)**.
 
 ## Final Project — Regional Dataset
 
-The [final-project notebook](Module_I/Final_Project/RNAseq_Module_I_Final_Project.ipynb) documents a separate analysis of approximately 3.4 Mb from mouse chromosome 7, using six course-provided samples and the corresponding GENCODE M30 annotation.
+The [final-project notebook](course_materials/Module_I/Final_Project/RNAseq_Module_I_Final_Project.ipynb) documents a separate analysis of approximately 3.4 Mb from mouse chromosome 7, using six course-provided samples and the corresponding GENCODE M30 annotation.
 
 The workflow includes input validation, STAR alignment, PsiCLASS assembly, annotation, Cuffdiff2, and DESeq2.
 
@@ -72,7 +72,7 @@ Large sequencing files, reference indexes, BAM files, and generated analysis out
 
 Several scripts and notebook settings contain paths specific to my local WSL2 setup and require adjustment before use elsewhere.
 
-See [Environment and execution](Module_I/ENVIRONMENT.md) for dependencies and instructions to record the analysis environment.
+See [Environment and execution](course_materials/Module_I/ENVIRONMENT.md) for dependencies and instructions to record the analysis environment.
 
 ## Tools
 
