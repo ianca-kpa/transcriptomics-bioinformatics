@@ -3,9 +3,11 @@
 **Course:** Bioinformatics Methods for Transcriptomics — Johns Hopkins University (Coursera)  
 **Dataset:** GSE83931 — mouse hippocampus RNA-seq  
 **Comparison:** 4 months (4mo) vs 1 month (1mo)  
-**Working environment:** Ubuntu / WSL2, Conda (`transcriptomics`), R 4.5.2
+**Recorded working environment:** Ubuntu / WSL2, Conda (`transcriptomics`), R 4.5.2
 
 I continued with the same six RNA-seq samples used for STAR, PsiCLASS and Cuffdiff2. For this part of the course, I followed the DESeq2 exercise and changed the paths and a few settings to run it locally.
+
+**Path and result provenance:** The `results/...` paths and D: references below describe my previous local layout. The current scripts source `configs/paths.sh`; for example, `scripts/13_run_deseq2.R` writes under `$BASEDIR/results-proj1/DESeq2/`. The numerical results are from the original local run and were not regenerated during this review; the sex-adjusted analysis is still pending verification.
 
 The six samples are:
 
@@ -142,6 +144,8 @@ results/DESeq2/Results/results_1mo_4mo.psiclass.csv
 A small p-value by itself is not enough to control multiple testing across thousands of genes. I use `padj` when interpreting statistically supported differential expression, while retaining the unadjusted p-value for the course's filtering exercise.
 
 ### Results from my original DESeq2 run
+
+These are saved results from the original run, not a fresh analysis. The count matrix and result files are stored outside the repository, so the numbers below could not be independently reproduced during this review.
 
 | Result | Genes |
 | --- | ---: |
@@ -331,42 +335,42 @@ The VS Code R extension initially reported that `jsonlite` was missing. After in
 
 ```bash
 which R
-# /home/ianca/miniconda3/envs/transcriptomics/bin/R
+# $TRANSCRIPTOMICS_ENV/bin/R
 ```
 
 I also accidentally entered `library(jsonlite)` and `library(DESeq2)` directly at the Bash prompt. Those are **R expressions**, so I needed to start `R` first, or run them through `Rscript -e '...'`.
 
 The message that some R packages were built under R 4.5.3 while I was using R 4.5.2 was a **warning**, not a failure in the successful package-loading test.
 
-## 10. File organization and version control
+## 10. Repository and result locations
 
-The relevant part of the local project is:
+The checked-in repository keeps the scripts and notes separate from the machine-specific analysis data:
 
 ```text
-Module_I/
-├── scripts/
-│   ├── 11_sort_bam_by_read_name.sh
-│   ├── 12_check_sorted_bam.sh
-│   ├── 13_run_deseq2.R
-│   ├── 13b_run_deseq2_with_sex.R
-│   ├── 14_summarize_deseq2.sh
-│   ├── 15_add_gene_names.sh
-│   └── 16_filter_deseq2.sh
-├── notes/
-│   └── 03_deseq2_differential_expression.md
-├── docs/                     # Course reference materials; not versioned
-└── results/                  # Symlink to local analysis storage
+repository/
+├── configs/
+│   └── paths.example.sh
+├── course_materials/Module_I/
+│   └── notes/
+└── scripts/
+    ├── 11_sort_bam_by_read_name.sh
+    ├── 12_check_sorted_bam.sh
+    ├── 13_run_deseq2.R
+    ├── 13b_run_deseq2_with_sex.R
+    ├── 14_summarize_deseq2.sh
+    ├── 15_add_gene_names.sh
+    └── 16_filter_deseq2.sh
+
+$BASEDIR/
+├── STAR/BAM/
+├── PsiCLASS/WithGeneNames/
+└── results-proj1/
+    ├── Sorted/
     └── DESeq2/
-        ├── Results/
-        │   ├── *.psiclass.csv
-        │   ├── deseq_filter_summary.csv
-        │   └── WithGeneNames/
-        │       └── gn_*.psiclass.csv
-        ├── *.png
-        └── *.Rout
+        └── Results/
 ```
 
-I keep large BAMs, count tables and figures on the D: drive and commit the scripts and notes to GitHub. Some scripts still use absolute WSL paths, so they would need path changes on another machine.
+Large BAMs, count tables, and figures are stored under `$BASEDIR` rather than committed. The local `configs/paths.sh` is machine-specific and is not tracked; create it from `configs/paths.example.sh` and set `BASEDIR` for the machine used.
 
 ## Next steps
 
@@ -374,5 +378,7 @@ I keep large BAMs, count tables and figures on the D: drive and commit the scrip
 - Add gene names to the `.A.psiclass.csv` result files once the sex-adjusted run is confirmed.
 - Examine which gene IDs overlap between the original and adjusted results, not only the total number of significant genes.
 - Interpret any biological findings in light of the sex imbalance and small sample size.
+
+See [Note 4 — Sex-adjusted DESeq2 and Method Comparison](04_sex_adjusted_deseq2_and_method_comparison.md) for the run prerequisites and comparison checks.
 
 *Course exercise: Johns Hopkins University / Coursera. Commands, adjustments and results above are from my local run.*

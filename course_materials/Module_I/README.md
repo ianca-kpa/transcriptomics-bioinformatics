@@ -25,7 +25,7 @@ Six sequencing runs were analyzed:
 | 1 month | SRR3734796, SRR3734797, SRR3734798 | Female, female, female |
 | 4 months | SRR3734820, SRR3734824, SRR3734825 | Female, male, male |
 
-**Limitation:** all three 1-month samples are female, while two of the 4-month samples are male. Differences attributed to age may also be influenced by sex. I wrote a separate DESeq2 script using `~ sex + condition`, but its results have not yet been checked.
+**Limitation:** all three 1-month samples are female, while two of the 4-month samples are male. Differences attributed to age may also be influenced by sex. I wrote a separate DESeq2 script using `~ sex + condition`, but its results have not yet been checked; see [note 04](notes/04_sex_adjusted_deseq2_and_method_comparison.md) for the planned validation and comparison.
 
 ## Workflow
 
@@ -62,7 +62,7 @@ The STAR index was built from the reference FASTA without incorporating a GTF fi
 
 ### Differential Expression Results
 
-The following values come from the completed analyses of the six selected samples, using the PsiCLASS-based annotation.
+The following values are from previously saved local analyses of the six selected samples using the PsiCLASS-based annotation. They were not independently reproduced during this review; see [Note 2](notes/02_cuffdiff2_differential_expression.md) and [Note 3](notes/03_deseq2_differential_expression.md) for their provenance.
 
 | Metric | Cuffdiff2 | DESeq2 (`~ condition`) |
 |---|---:|---:|
@@ -108,18 +108,18 @@ scripts/                    # Numbered repository-level analysis scripts
 configs/                    # Local path configuration and example
 ```
 
-Large datasets, reference files, indexes, BAMs, and generated analysis results are stored locally rather than committed to GitHub. The numbered workflows in `scripts/` load machine-specific paths from `configs/paths.sh` and must be adapted on another machine.
+Large datasets, indexes, BAMs, and generated analysis results are stored locally rather than committed to GitHub. The numbered workflows in `scripts/` load machine-specific paths from `configs/paths.sh` and must be adapted on another machine. Script 01 extracts accessions from the Module I SRA table; script 02 defaults to its six-sample list; script 03 defaults to the Module II list and must be given the Module I list for conversion. A Module I six-sample batch-alignment script is still needed; see [the data preparation and STAR note](notes/01_rnaseq_data_preparation_and_star_alignment.md).
 
 ### Main Scripts
 
 | Script | Purpose |
 |---|---|
-| `01_extract_sra_accessions.sh` | Extract run identifiers from metadata |
-| `02_download_sra.sh` | Download SRA runs |
-| `03_convert_sra_to_fastq.sh` | Convert SRA to FASTQ |
+| `01_extract_sra_accessions.sh` | Extract run identifiers from Module I metadata |
+| `02_download_sra.sh` | Download SRA runs (defaults to Module I; `SRA_RUNS_FILE` overrides) |
+| `03_convert_sra_to_fastq.sh` | Convert SRA to FASTQ (defaults to Module II; `SRA_RUNS_FILE` overrides) |
 | `04_generate_star_index.sh` | Build the STAR genome index |
-| `05a_test_star_alignment.sh` | Test alignment on one sample |
-| `05b_align_all_samples_star.sh` | Align all six samples |
+| `05a_test_star_alignment.sh` | Test alignment on one Module I sample |
+| `05b_align_all_samples_star.sh` | Module II batch alignment; not the Module I six-run workflow |
 | `06a_run_psiclass.sh` | Assemble transcripts with PsiCLASS |
 | `06b_download_reference_annotation.sh` | Prepare reference annotation |
 | `07_annotate_transcripts.sh` | Annotate assembled transcripts |
@@ -161,8 +161,9 @@ The `gn_` tables are created separately using the course-provided `add_gn_name` 
 - [RNA-seq Data Preparation and STAR Alignment](notes/01_rnaseq_data_preparation_and_star_alignment.md)
 - [Cuffdiff2 Differential Expression](notes/02_cuffdiff2_differential_expression.md)
 - [DESeq2 Differential Expression](notes/03_deseq2_differential_expression.md)
+- [Sex-adjusted DESeq2 and Method Comparison](notes/04_sex_adjusted_deseq2_and_method_comparison.md)
 
-The notes record commands, decisions, errors, and explanations from the exercises. The sex-adjusted DESeq2 comparison and direct Cuffdiff2/DESeq2 gene-set comparison remain pending verification.
+The notes record commands, decisions, errors, and explanations from the exercises. The sex-adjusted DESeq2 results and direct Cuffdiff2/DESeq2 gene-set comparison remain pending verification; see note 04 for the planned checks.
 
 ## Tools and Technologies
 

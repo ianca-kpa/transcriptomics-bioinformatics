@@ -29,7 +29,7 @@ The [analysis notebook](RNAseq_Module_I_Final_Project.ipynb) includes:
 
 ## Input files
 
-The notebook expects the following files in `data_raw/`:
+The notebook expects the following files in `data_raw/`, which are included in this repository:
 
 - `region.fa`
 - `gencode.vM30.region.gtf`
@@ -41,39 +41,35 @@ The notebook expects the following files in `data_raw/`:
 - `4mo_Rep2.fastq.gz`
 - `4mo_Rep3.fastq.gz`
 
-Obtain the prepared input bundle from the course resources.
-Raw reads and reference files are not included in this repository.
+These course-prepared regional inputs are retained with redistribution permission confirmed.
 
 The original study's SRA accessions are not a direct replacement for
 the prepared regional dataset.
 
-A small sample table is retained in [metadata.tsv](metadata.tsv).
-It reproduces the sample names and age groups displayed in the notebook. Compare it with the metadata supplied with the course bundle before use.
+A copy of the sample table is also retained in [metadata.tsv](metadata.tsv).
+Both tables list the sample names and age groups displayed in the notebook.
 
 ## Running the notebook
 
 1. Install the dependencies described in
    [Environment and execution](../ENVIRONMENT.md).
-2. Set `REPO_DIR` and `DATA_DIR` in the notebook configuration.
+2. The notebook locates this project from its current working directory. Optionally set `TRANSCRIPTOMICS_DATA_DIR` to choose where analysis outputs are stored; by default they go under `results-proj1/`.
 3. Check the paths to the PsiCLASS and Rscript executables.
-4. Place the input files in `data_raw/`.
-5. Review the read-layout issue below before accepting counting results.
-6. Execute the notebook cells in order.
+4. Confirm the listed input files are present in `data_raw/`.
+5. Execute the notebook cells in order. Corrected single-end count outputs are written under `results/DESeq2_single_end/` so prior count results are not reused.
 
 The notebook reuses existing output files. If inputs or parameters change, use a fresh output directory or deliberately regenerate the
 affected steps. Existing files do not necessarily correspond to the current configuration.
 
-## Verification still required
+## Read layout
 
-The published notebook describes paired-end data, supplies one FASTQ per sample to STAR, and uses `singleEnd = FALSE` with `fragments = TRUE`
-for counting.
+The six included FASTQ files contain one read per record, and the corresponding source SRA records are marked `SINGLE`. The notebook therefore supplies one FASTQ per sample to STAR and uses `singleEnd = TRUE` with `fragments = FALSE` for counting.
 
-The original input layout and BAM pairing flags need to be checked locally so that the description, alignment, and counting settings agree.
-The settings should not be changed simply to reproduce expected counts.
+If replacing the supplied FASTQ files, verify their layout and update the STAR alignment and counting settings together.
 
 ## Recorded results
 
-The following values come from the saved notebook outputs. They have not been regenerated during the repository documentation update.
+The following values come from saved notebook outputs and have not been regenerated with the corrected single-end counting settings. In particular, regenerate the count matrix and DESeq2 analysis before interpreting those DESeq2 values.
 
 | Metric | Recorded result |
 |---|---:|
@@ -84,15 +80,12 @@ The following values come from the saved notebook outputs. They have not been re
 | DESeq2 loci with adjusted p ≤ 0.05 | 3 |
 | Cuffdiff2 FDR-significant loci | 4 |
 
-PsiCLASS loci and distinct reference gene names are different counts. These results also should not be combined with those from the
-whole-genome exercise.
-
-Interpretation is limited to this regional dataset and the course exercise. The read-layout verification remains outstanding.
+PsiCLASS loci and distinct reference gene names are different counts. These results are limited to the regional course dataset and should not be combined with those from the whole-genome exercise.
 
 ## Repository contents
 
-The notebook, documentation, and small metadata table are versioned. Raw data, indexes, BAM files, and complete generated results are
-excluded from Git.
+The notebook, documentation, sample metadata, and the six prepared regional FASTQs and reference files listed above are versioned.
+Indexes, BAM files, and generated analysis results are excluded from Git.
 
 Selected figures and small result summaries can be added after verification, with their analysis scope and parameters documented.
 

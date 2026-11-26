@@ -35,7 +35,7 @@ The workflow includes:
 - Read counting, normalization, and statistical analysis.
 - PCA, volcano plots, and exploration of expression filters.
 
-In the initial DESeq2 model (`~ condition`), 271 of 14,293 genes in the results table had adjusted p-values ≤ 0.05.
+The previously saved initial DESeq2 run (`~ condition`) reported 271 of 14,293 genes with adjusted p-values ≤ 0.05. These historical outputs were not reproduced during this review; see the [Module I DESeq2 note](course_materials/Module_I/notes/03_deseq2_differential_expression.md).
 
 The comparison has an important limitation: the age groups are not balanced by biological sex. A second DESeq2 script includes sex as a covariate, but its results remain pending verification.
 
@@ -47,9 +47,9 @@ A separate [Jupyter notebook](course_materials/Module_I/Final_Project/RNAseq_Mod
 
 The workflow includes STAR, PsiCLASS, transcript annotation, Cuffdiff2, and DESeq2.
 
-The saved DESeq2 output contains 142 loci, including 3 with adjusted p-values ≤ 0.05.
+The saved DESeq2 output contains 142 loci, including 3 with adjusted p-values ≤ 0.05. These results have not been regenerated with the corrected single-end counting settings; see the [final-project README](course_materials/Module_I/Final_Project/README.md).
 
-These regional results are separate from the whole-genome analysis. Read layout and counting consistency still require verification.
+These regional results are separate from the whole-genome analysis. The input reads are single-end, but the saved count and DESeq2 outputs predate the corrected single-end settings and should be regenerated before interpretation.
 
 ## Module II — Alternative Splicing
 
@@ -110,7 +110,8 @@ transcriptomics-bioinformatics/
 │   │       └── data_raw/
 │   └── Module_II/
 │       ├── README.md
-│       └── metadata/
+│       ├── metadata/
+│       └── notes/
 ├── .gitignore
 └── README.md
 ```
@@ -123,7 +124,7 @@ The repository includes a [configuration example](configs/paths.example.sh). Use
 
 Whole-genome sequencing files, STAR indexes, BAM files, and generated analysis outputs are stored outside Git.
 
-The Module I final-project folder currently contains a prepared regional teaching dataset and supporting reference files. Redistribution permissions for course-provided files should be checked separately.
+The Module I final-project folder contains the prepared regional teaching dataset and supporting reference files. Redistribution permission for these course-provided files has been confirmed.
 
 See [Environment and execution](course_materials/Module_I/ENVIRONMENT.md) for software dependencies and environment information.
 

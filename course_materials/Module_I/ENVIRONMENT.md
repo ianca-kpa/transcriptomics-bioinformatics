@@ -20,6 +20,7 @@ running the workflow on another machine.
 | GenomicFeatures, GenomicAlignments, Rsamtools | Annotation and counting |
 | SummarizedExperiment, txdbmaker | Count objects and transcript databases |
 | EnhancedVolcano, ggplot2 | Figures in the whole-genome scripts |
+| rMATS (`rmats.py`) | Event-level alternative splicing analysis in Module II |
 
 The notebook expects PsiCLASS in a Conda environment named `psiclass`
 and Rscript in an environment named `transcriptomics`.
@@ -27,6 +28,10 @@ and Rscript in an environment named `transcriptomics`.
 Some tools may be installed outside Conda. Course utilities such as
 `add_gn_name` are referenced in the local `course_materials/Module_I/docs/` directory
 and must be obtained from the course resources.
+
+The Module II rMATS script expects `rmats.py` to be available on `PATH`.
+Record the rMATS version and the environment used for each run alongside
+the results; the script and the local path configuration do not pin software versions.
 
 ## Record the analysis environment
 

@@ -2,32 +2,44 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Get the absolute directory containing this script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Get the project root directory
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Define paths
-SRA_DIR="$PROJECT_DIR/data/SRA"
-RUN_LIST="$PROJECT_DIR/metadata/selected_runs.txt"
+source "${PROJECT_DIR}/configs/paths.sh"
 
-# Create output directory
+SRA_DIR="${BASEDIR}/SRA"
+# Override SRA_RUNS_FILE to download a different module's run list.
+RUNS_FILE="${SRA_RUNS_FILE:-${PROJECT_DIR}/course_materials/Module_I/metadata/selected_runs.txt}"
+if [[ "$RUNS_FILE" != /* ]]; then
+    RUNS_FILE="${PROJECT_DIR}/${RUNS_FILE}"
+fi
+
+if [[ ! -s "$RUNS_FILE" ]]; then
+    echo "ERROR: Run list not found or empty: $RUNS_FILE" >&2
+    exit 1
+fi
+
+command -v prefetch >/dev/null || {
+    echo "ERROR: prefetch not found. Activate the SRA Toolkit environment." >&2
+    exit 1
+}
+
 mkdir -p "$SRA_DIR"
 
-# Download each SRA run
-while IFS= read -r run || [[ -n "$run" ]]; do
+echo "Run list: $RUNS_FILE"
+echo "SRA output: $SRA_DIR"
 
-    # Skip empty lines and comments
+while IFS= read -r run || [[ -n "$run" ]]; do
+    run="${run%$'\r'}"
+
     [[ -z "$run" || "$run" == \#* ]] && continue
 
     echo "Downloading $run..."
 
-    # Download the SRA run using prefetch and save it to the specified directory
-    prefetch "$run" -O "$SRA_DIR" 
+    prefetch "$run" -O "$SRA_DIR"
 
     echo "Downloaded: $run"
 
-done < "$RUN_LIST"
+done < "$RUNS_FILE"
 
 echo "All downloads completed!"

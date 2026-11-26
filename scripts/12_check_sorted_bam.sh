@@ -28,9 +28,21 @@ do
     # quickcheck is a command-line tool that checks the integrity of BAM files. 
     # It verifies that the file is not truncated and that the header and alignment sections are consistent.
 
-    # Check the BAM sorting order
-    /usr/bin/samtools view -H "$BAM" | grep '^@HD'
-    # The command extracts the header lines from the BAM file and searches for the '@HD' line, which contains information about the file's header.
+    # Require the BAM header to declare queryname sorting.
+    if ! /usr/bin/samtools view -H "$BAM" |
+         awk -F '\t' '
+             $1 == "@HD" {
+                 for (i = 2; i <= NF; i++) {
+                     if ($i == "SO:queryname") found = 1
+                 }
+             }
+             END { exit !found }
+         '; then
+        echo "ERROR: BAM is not marked queryname-sorted: $BAM" >&2
+        exit 1
+    fi
+
+    echo "Sort order: queryname"
 
     echo "Finished checking $i"
     echo "---------------------------"

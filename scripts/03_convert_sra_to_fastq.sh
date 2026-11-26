@@ -7,32 +7,42 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Get the project root directory
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Define paths
-SRA_DIR="$PROJECT_DIR/data/SRA"
-FASTQ_DIR="$PROJECT_DIR/data/FASTQ"
-RUN_LIST="$PROJECT_DIR/Module_II/metadata/selected_runs_m2.txt"
+source "${PROJECT_DIR}/configs/paths.sh"
 
-# Create output directory
+SRA_DIR="${BASEDIR}/SRA"
+FASTQ_DIR="${BASEDIR}/FASTQ"
+# Override SRA_RUNS_FILE to convert a different module's run list.
+RUNS_FILE="${SRA_RUNS_FILE:-${PROJECT_DIR}/course_materials/Module_II/metadata/selected_runs_m2.txt}"
+if [[ "$RUNS_FILE" != /* ]]; then
+    RUNS_FILE="${PROJECT_DIR}/${RUNS_FILE}"
+fi
+
+if [[ ! -s "$RUNS_FILE" ]]; then
+    echo "ERROR: Run list not found or empty: $RUNS_FILE" >&2
+    exit 1
+fi
+
+command -v fasterq-dump >/dev/null || {
+    echo "ERROR: fasterq-dump not found. Activate the SRA Toolkit environment." >&2
+    exit 1
+}
+
 mkdir -p "$FASTQ_DIR"
 
-# Convert each SRA run to FASTQ
 while IFS= read -r run || [[ -n "$run" ]]; do
+    run="${run%$'\r'}"
 
-    # Skip empty lines and comments
     [[ -z "$run" || "$run" == \#* ]] && continue
 
     echo "Converting $run..."
 
-    # Locate the downloaded SRA file
     SRA_FILE="$SRA_DIR/$run/$run.sra"
 
-    # Check if the SRA file exists
-    if [[ ! -f "$SRA_FILE" ]]; then
-        echo "ERROR: SRA file not found: $SRA_FILE" >&2
+    if [[ ! -s "$SRA_FILE" ]]; then
+        echo "ERROR: SRA file not found or empty: $SRA_FILE" >&2
         exit 1
     fi
 
-    # Convert SRA to FASTQ using fasterq-dump
     fasterq-dump "$SRA_FILE" \
         --outdir "$FASTQ_DIR" \
         --outfile "$run.fastq" \
@@ -40,6 +50,6 @@ while IFS= read -r run || [[ -n "$run" ]]; do
 
     echo "Converted: $run"
 
-done < "$RUN_LIST"
+done < "$RUNS_FILE"
 
 echo "All conversions completed!"

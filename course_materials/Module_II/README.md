@@ -16,6 +16,8 @@ splicing patterns from short-read RNA-seq data.
 - Conditions: 1, 2, and 4 months of development
 - Initial rMATS comparison: 3 samples at 1 month versus 3 samples at 4 months
 
+The Module II STAR batch uses all nine runs across the three conditions. The initial rMATS comparison uses the six 1-month and 4-month samples as a subset.
+
 The 1-month and 4-month groups are not balanced by biological sex. Three 1-month samples are female, while the 4-month group contains one female and two males.
 
 ## Analysis Workflow
@@ -64,3 +66,9 @@ The rMATS analysis is exploratory. Sequencing layout, read lengths, sex imbalanc
 ## Status
 
 In progress. Initial rMATS analysis completed; downstream event and gene-level review remains to be performed.
+
+## Study Notes
+
+- [Alternative splicing with rMATS](notes/01_rmats_alternative_splicing.md)
+
+The note documents the checked event counts, current rMATS settings, and read-layout checks that remain before rerunning the analysis.

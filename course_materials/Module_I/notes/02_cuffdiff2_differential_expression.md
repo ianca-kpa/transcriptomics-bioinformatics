@@ -5,6 +5,8 @@
 
 After aligning the six RNA-seq samples with STAR and assembling transcripts with PsiCLASS, I used Cuffdiff2 to compare the **1-month** and **4-month** mouse hippocampus samples. This note records the command I used, a couple of mistakes I had to fix, and the results I obtained. My next step is to try DESeq2 and compare the approaches.
 
+**Path and result provenance:** The `results/...` paths, D: references, and numerical summaries below describe a previous local WSL run. The checked-in scripts currently load `configs/paths.sh` and use paths derived from `$BASEDIR`; adjust path examples to the configuration on the machine used for analysis. The result files are not tracked in the repository, so the recorded counts have not been independently reproduced here.
+
 ## Input data
 
 | Group | Runs |
@@ -18,7 +20,7 @@ I used coordinate-sorted STAR BAMs from `results/STAR/BAM/` and the annotated Ps
 results/PsiCLASS/WithGeneNames/psiclass_vote.withStrand.gtf
 ```
 
-My output directory is `results/Cuffdiff/`, which points to the D: drive through the repository's `results` symbolic link.
+In my previous local layout, the output directory was `results/Cuffdiff/`, reached through a symbolic link to the D: drive. The current script uses the configured `$CUFFDIFF_DIR`.
 
 ## Running Cuffdiff2
 
@@ -55,7 +57,8 @@ I had accidentally left spaces after the `\` used to continue the command across
 I monitored the analysis with:
 
 ```bash
-tail -f results/Cuffdiff/cuffdiff.log
+source configs/paths.sh
+tail -f "${CUFFDIFF_DIR}/cuffdiff.log"
 pgrep -af cuffdiff
 ```
 
@@ -120,7 +123,7 @@ awk -F '\t' '$14 == "yes" && $10 < 0' gene_exp.diff | wc -l
 grep -c $'\tyes$' isoform_exp.diff
 ```
 
-My results:
+Results recorded from the previous local run:
 
 | Result | Count |
 |---|---:|
@@ -137,10 +140,10 @@ The instructor also showed how to combine an unadjusted p-value threshold with a
 
 ```bash
 # p < 0.05 and |log2FC| > 0.5
-awk -F '\t' '($10 < -0.5 || $10 > 0.5) && $12 < 0.05' gene_exp.diff | wc -l
+awk -F '\t' '$7 == "OK" && ($10 < -0.5 || $10 > 0.5) && $12 < 0.05' gene_exp.diff | wc -l
 
 # p < 0.05 and |log2FC| > 1
-awk -F '\t' '($10 < -1 || $10 > 1) && $12 < 0.05' gene_exp.diff | wc -l
+awk -F '\t' '$7 == "OK" && ($10 < -1 || $10 > 1) && $12 < 0.05' gene_exp.diff | wc -l
 ```
 
 | Filter | My count |
@@ -148,7 +151,9 @@ awk -F '\t' '($10 < -1 || $10 > 1) && $12 < 0.05' gene_exp.diff | wc -l
 | p < 0.05 and \|log2FC\| > 0.5 | **507** |
 | p < 0.05 and \|log2FC\| > 1 | **131** |
 
-I initially made a mistake with the second filter: I wrote `$10 <= 1 || $10 > 1`, which covers essentially every numeric log2FC and returned **1,362** rows. The intended condition is `$10 < -1 || $10 > 1`, which selected **131**. That was a useful reminder to check logical conditions before interpreting a count.
+The counts above are historical. The original `gene_exp.diff` file is not included in the repository, so the 0.5 cutoff should be recalculated with the corrected filter. The repository summary script uses `status == "OK"` for the 1.0 cutoff and is recorded as returning 131; verify that value against the current result file before relying on it.
+
+I initially made a mistake with the second filter: I wrote `$10 <= 1 || $10 > 1`, which covers essentially every numeric log2FC and returned **1,362** rows. The intended condition is `$7 == "OK" && ($10 < -1 || $10 > 1) && $12 < 0.05`. This was a useful reminder to check logical conditions before interpreting a count.
 
 These **p-value filters are exploratory**. They are not the same as selecting genes significant after multiple-testing correction with the Cuffdiff2 `q_value`/`significant` flag.
 
@@ -184,10 +189,11 @@ I have not investigated these genes in detail yet. One result I want to check ca
 I created `scripts/10_summarize_cuffdiff.sh` so I would not need to type the counting commands every time. To print its output and save it:
 
 ```bash
-./scripts/10_summarize_cuffdiff.sh | tee results/Cuffdiff/cuffdiff_summary.txt
+source configs/paths.sh
+./scripts/10_summarize_cuffdiff.sh | tee "${CUFFDIFF_DIR}/cuffdiff_summary.txt"
 ```
 
-The summary returned **265 significant genes**, **212 significant isoforms**, **63 upregulated genes**, **202 downregulated genes**, and **131 records** with p < 0.05 and |log2FC| > 1. Full results stay on D:, while the scripts and notes are versioned in Git.
+The previous summary reported **265 significant genes**, **212 significant isoforms**, **63 upregulated genes**, **202 downregulated genes**, and **131 records** with p < 0.05 and |log2FC| > 1. These values have not been rechecked against the current result files.
 
 ## What I want to do next
 
@@ -197,7 +203,7 @@ The summary returned **265 significant genes**, **212 significant isoforms**, **
 
 ## Command reference — how the Bash analysis works
 
-I want to be able to reproduce these filters later, so I am keeping the commands and their explanations together. Unless indicated otherwise, I run them from `results/Cuffdiff/`.
+I want to be able to reproduce these filters later, so I am keeping the commands and their explanations together. The commands that read `gene_exp.diff` assume the current directory is the Cuffdiff output directory; in the current scripts, that is `$CUFFDIFF_DIR`.
 
 ### The Cuffdiff command, argument by argument
 
@@ -269,7 +275,7 @@ A shortcut is `grep -c $'\tyes$' gene_exp.diff`, which counts lines ending with 
 ### Combining p-value with a log2FC cutoff
 
 ```bash
-awk -F '\t' '($10 < -0.5 || $10 > 0.5) && $12 < 0.05' gene_exp.diff | wc -l
+awk -F '\t' '$7 == "OK" && ($10 < -0.5 || $10 > 0.5) && $12 < 0.05' gene_exp.diff | wc -l
 ```
 
 - `||` means **OR**: I accept a large negative **or** a large positive change.
@@ -280,10 +286,10 @@ awk -F '\t' '($10 < -0.5 || $10 > 0.5) && $12 < 0.05' gene_exp.diff | wc -l
 I once typed `($10 <= 1 || $10 > 1)`. For numeric values, that condition covers everything (a value is either at most 1 or greater than 1), so I was effectively filtering only on p-value. The correct second condition is:
 
 ```bash
-awk -F '\t' '($10 < -1 || $10 > 1) && $12 < 0.05' gene_exp.diff | wc -l
+awk -F '\t' '$7 == "OK" && ($10 < -1 || $10 > 1) && $12 < 0.05' gene_exp.diff | wc -l
 ```
 
-The result was **131**, while the ±0.5 filter returned **507**. These counts are *not* FDR-controlled findings because they use `p_value`, not `q_value`.
+The historical result was **131**, while the ±0.5 filter returned **507**. Recalculate both with the corrected commands when `gene_exp.diff` is available. These counts are *not* FDR-controlled findings because they use `p_value`, not `q_value`.
 
 ### Sorting and previewing candidate genes
 
@@ -311,10 +317,11 @@ awk -F '\t' 'NR == 1 || ($14 == "yes" && $10 > 0)' gene_exp.diff > genes_upregul
 - `>>` would append instead; I generally do **not** want it for a full filtered table because I might create duplicate results by rerunning the command.
 
 ```bash
-./scripts/10_summarize_cuffdiff.sh | tee results/Cuffdiff/cuffdiff_summary.txt
+source configs/paths.sh
+./scripts/10_summarize_cuffdiff.sh | tee "${CUFFDIFF_DIR}/cuffdiff_summary.txt"
 ```
 
-- `./` runs the script relative to my current directory (this example assumes I am in `Module_I`, not inside `results/Cuffdiff/`).
+- `./` runs the script relative to the current directory; run it from the repository root, where `scripts/10_summarize_cuffdiff.sh` is located.
 - `|` sends its displayed output to another command.
 - `tee` displays the output **and** saves it to a text file. By default, it overwrites the file; `tee -a` appends.
 - If I run a command from a different folder, I must adjust its relative file paths.
@@ -327,7 +334,7 @@ cut -f7 results/Cuffdiff/gene_exp.diff | sort | uniq -c
 ls -lh results/Cuffdiff/gene_exp.diff
 ```
 
-These commands are meant to run from `Module_I`. They check column order, test statuses and whether the result file exists. They do not prove that the experimental design is free of confounding factors: I still need to inspect sex metadata before interpreting the Month 1/Month 4 difference biologically.
+These paths reflect the previous local layout. In the current configuration, use `$CUFFDIFF_DIR` for the result-file location. The checks verify column order, test statuses and file presence; they do not prove that the experimental design is free of confounding factors. Inspect the sex metadata before interpreting the Month 1/Month 4 difference biologically.
 
 ## Next Steps
 
