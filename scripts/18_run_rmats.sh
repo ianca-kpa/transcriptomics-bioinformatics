@@ -12,7 +12,7 @@ source "${PROJECT_DIR}/configs/paths.sh"
 
 # Directories
 DATADIR="$STAR_BAM_DIR"
-WORKDIR="${BASEDIR}/rMATS"
+WORKDIR="${RMATS_DIR}"
 ANNOT="$REFERENCE_GTF"
 
 OUTDIR="${WORKDIR}/Ctrl-vs-Test"

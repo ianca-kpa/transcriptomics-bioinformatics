@@ -11,6 +11,7 @@ STAR_INDEX_DIR="${BASEDIR}/reference/star_index"
 
 # PsiCLASS outputs
 PSICLASS_DIR="${BASEDIR}/PsiCLASS"
+PSICLASS_M2_DIR="${BASEDIR}/PsiCLASS_Module_II"
 
 # Cuffdiff outputs
 CUFFDIFF_DIR="${BASEDIR}/Cuffdiff"
@@ -23,3 +24,6 @@ REFERENCE_GTF="${REFERENCE_DIR}/gencode.vM30.annotation.gtf"
 SORTED_BAM_DIR="${BASEDIR}/results-proj1/Sorted"
 DESEQ2_DIR="${BASEDIR}/results-proj1/DESeq2"
 DESEQ2_RESULTS_DIR="${DESEQ2_DIR}/Results"
+
+# rMATS outputs
+RMATS_DIR="${BASEDIR}/rMATS"

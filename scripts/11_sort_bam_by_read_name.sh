@@ -32,7 +32,7 @@ do
     -@ 2 \
     -O BAM \
     -o "${i}.so.bam" \
-    "../STAR/BAM/${i}_Aligned.sortedByCoord.out.bam" \
+    "${DATADIR}/${i}_Aligned.sortedByCoord.out.bam" \
     &> "${i}.sort.log"
 done
 

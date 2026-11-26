@@ -1,3 +1,4 @@
+
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -11,10 +12,10 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 source "${PROJECT_DIR}/configs/paths.sh"
 
 DATADIR="${BASEDIR}/FASTQ"
-WORKDIR="${STAR_DIR}"
+WORKDIR="${STAR_DIR}/test"
 STAR2IDX="$STAR_INDEX_DIR"
 
-mkdir -p $WORKDIR
+mkdir -p "$WORKDIR"
 
 for i in SRR3734796
 do
@@ -32,7 +33,7 @@ do
   $STAR --runThreadN 2 --genomeDir $STAR2IDX/ \
         --readFilesIn $DATADIR/${i}.fastq \
         --outSAMtype BAM SortedByCoordinate --outSAMstrandField intronMotif \
-        --outFileNamePrefix ${WORKDIR}/${i}_
+        --outFileNamePrefix "${WORKDIR}/${i}_"
 
 done
 
