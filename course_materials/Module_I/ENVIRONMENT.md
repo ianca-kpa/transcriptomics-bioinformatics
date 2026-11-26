@@ -25,7 +25,7 @@ The notebook expects PsiCLASS in a Conda environment named `psiclass`
 and Rscript in an environment named `transcriptomics`.
 
 Some tools may be installed outside Conda. Course utilities such as
-`add_gn_name` are referenced in the local `Module_I/docs/` directory
+`add_gn_name` are referenced in the local `course_materials/Module_I/docs/` directory
 and must be obtained from the course resources.
 
 ## Record the analysis environment
@@ -34,10 +34,10 @@ Run these commands on the machine used for the analysis, from the
 repository root:
 
 ```bash
-mkdir -p Module_I/environment
+mkdir -p course_materials/Module_I/environment
 
-conda env export -n transcriptomics --no-builds > Module_I/environment/transcriptomics.yml
-conda env export -n psiclass --no-builds > Module_I/environment/psiclass.yml
+conda env export -n transcriptomics --no-builds > course_materials/Module_I/environment/transcriptomics.yml
+conda env export -n psiclass --no-builds > course_materials/Module_I/environment/psiclass.yml
 
-STAR --version > Module_I/environment/STAR-version.txt
-samtools --version > Module_I/environment/SAMtools-version.txt
+STAR --version > course_materials/Module_I/environment/STAR-version.txt
+samtools --version > course_materials/Module_I/environment/SAMtools-version.txt

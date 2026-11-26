@@ -7,8 +7,10 @@ I adapted the workflow to Ubuntu/WSL2 and added checks for input files, sample m
 
 ## Project scope
 
-The analysis uses six course-provided samples: three from 1-month-old mice and three from 4-month-old mice. The reference covers approximately
+The analysis uses six course-prepared FASTQ samples: three from 1-month-old mice and three from 4-month-old mice. The reference covers approximately
 3.4 Mb of mouse chromosome 7, using GRCm39 and the corresponding GENCODE M30 annotation.
+
+This is a regional teaching dataset supplied for the course exercise. It is separate from the six whole-genome SRA runs used in the main Module I analysis.
 
 This regional exercise is separate from the whole-genome analysis described in the [Module I README](../README.md).
 

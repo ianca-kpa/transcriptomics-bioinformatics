@@ -95,17 +95,20 @@ The `baseMean` threshold had relatively little effect on the adjusted-significan
 ## Module Structure
 
 ```text
-Module_I/
+course_materials/Module_I/
 ├── README.md               # This module overview
-├── data/                   # Local links to SRA and FASTQ data
-├── docs/                   # Course reference files (gitignored)
+├── ENVIRONMENT.md          # Local environment and dependency notes
+├── docs/                   # Course reference files and utilities
 ├── metadata/               # SRA and sample metadata
 ├── notes/                  # Study notes
-├── scripts/                # Numbered analysis scripts
-└── results/                # Local link to outputs on another drive
+├── Final_Project/          # Regional chromosome 7 exercise
+└── raw_counts.*.csv        # Selected count exports
+
+scripts/                    # Numbered repository-level analysis scripts
+configs/                    # Local path configuration and example
 ```
 
-Large datasets, reference files, indexes, BAMs, and generated analysis results are stored locally, rather than committed to GitHub. Paths in some scripts are specific to the local WSL2 setup and must be adapted on other machines.
+Large datasets, reference files, indexes, BAMs, and generated analysis results are stored locally rather than committed to GitHub. The numbered workflows in `scripts/` load machine-specific paths from `configs/paths.sh` and must be adapted on another machine.
 
 ### Main Scripts
 
@@ -157,8 +160,9 @@ The `gn_` tables are created separately using the course-provided `add_gn_name` 
 
 - [RNA-seq Data Preparation and STAR Alignment](notes/01_rnaseq_data_preparation_and_star_alignment.md)
 - [Cuffdiff2 Differential Expression](notes/02_cuffdiff2_differential_expression.md)
+- [DESeq2 Differential Expression](notes/03_deseq2_differential_expression.md)
 
-The notebooks record commands, decisions, errors, and explanations from the exercises. Additional notes on DESeq2 and gene annotation will be added as the module progresses.
+The notes record commands, decisions, errors, and explanations from the exercises. The sex-adjusted DESeq2 comparison and direct Cuffdiff2/DESeq2 gene-set comparison remain pending verification.
 
 ## Tools and Technologies
 
