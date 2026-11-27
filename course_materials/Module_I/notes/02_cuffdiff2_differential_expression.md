@@ -3,9 +3,19 @@
 *Course: Bioinformatics Methods for Transcriptomics (Johns Hopkins University, Coursera)*  
 *Tool: Cuffdiff2 v2.2.1 (Debian package)*
 
-After aligning the six RNA-seq samples with STAR and assembling transcripts with PsiCLASS, I used Cuffdiff2 to compare the **1-month** and **4-month** mouse hippocampus samples. This note records the command I used, a couple of mistakes I had to fix, and the results I obtained. My next step is to try DESeq2 and compare the approaches.
+After aligning the six RNA-seq samples with STAR and assembling transcripts with PsiCLASS, I used Cuffdiff2 to compare the **1-month** and **4-month** mouse hippocampus samples. This note records the current inputs, the analysis steps, how I inspect the output, and a few command-line lessons. The later DESeq2 analyses and their gene-level comparisons are documented in Notes 03 and 04.
 
-**Path and result provenance:** The `results/...` paths, D: references, and numerical summaries below describe a previous local WSL run. The checked-in scripts currently load `configs/paths.sh` and use paths derived from `$BASEDIR`; adjust path examples to the configuration on the machine used for analysis. The result files are not tracked in the repository, so the recorded counts have not been independently reproduced here.
+The checked-in workflow reads the six genome-wide STAR BAMs from `$BASEDIR/STAR/BAM/`, uses the genome-wide PsiCLASS GTF at `$BASEDIR/PsiCLASS/WithGeneNames/psiclass_vote.withStrand.gtf`, and writes to `$CUFFDIFF_DIR` (currently `$BASEDIR/Cuffdiff/`). I verified the current `gene_exp.diff` and `isoform_exp.diff` directly; this note reports only those current results.
+
+## Step-by-step workflow
+
+1. Check that the six coordinate-sorted STAR BAMs and genome-wide PsiCLASS GTF exist; confirm that the three 1mo samples are the control and the three 4mo samples are the test.
+2. Verify `configs/paths.sh` points to the intended input and output locations.
+3. If a new run is intended, run `./scripts/09_run_cuffdiff.sh` from the repository root. The script reuses `$CUFFDIFF_DIR` if it already exists and can replace results; do not run it over results you need to preserve.
+4. Inspect `$CUFFDIFF_DIR/cuffdiff.log`, `run.info`, and the `gene_exp.diff` header before interpreting fields.
+5. Count significant genes using both `status == "OK"` and `significant == "yes"`; the verified current total is 261 of 14,214 unique gene IDs.
+6. Use p-value and log2FC cutoffs only as separately labeled exploratory summaries. Compare methods by gene ID, not aggregate counts.
+7. See Note 04 for the verified gene-level comparison with sex-adjusted DESeq2 and its design limitations.
 
 ## Input data
 
@@ -14,13 +24,13 @@ After aligning the six RNA-seq samples with STAR and assembling transcripts with
 | Month 1 (first condition) | `SRR3734796`, `SRR3734797`, `SRR3734798` |
 | Month 4 (second condition) | `SRR3734820`, `SRR3734824`, `SRR3734825` |
 
-I used coordinate-sorted STAR BAMs from `results/STAR/BAM/` and the annotated PsiCLASS file:
+The checked-in script uses the coordinate-sorted STAR BAMs in `$BASEDIR/STAR/BAM/` and the genome-wide annotated PsiCLASS file:
 
 ```text
-results/PsiCLASS/WithGeneNames/psiclass_vote.withStrand.gtf
+$BASEDIR/PsiCLASS/WithGeneNames/psiclass_vote.withStrand.gtf
 ```
 
-In my previous local layout, the output directory was `results/Cuffdiff/`, reached through a symbolic link to the D: drive. The current script uses the configured `$CUFFDIFF_DIR`.
+The output directory is configured as `$CUFFDIFF_DIR` in `configs/paths.sh` (currently `$BASEDIR/Cuffdiff/`). The available `run.info` records Cuffdiff2 version 2.2.1.
 
 ## Running Cuffdiff2
 
@@ -42,7 +52,7 @@ cuffdiff \
 - `CTRLBAMS` / `TESTBAMS`: comma-separated BAM paths, with three replicates in each group.
 - `&>`: save program messages and errors in the log file.
 
-The order matters: **Month 1 is the first condition and Month 4 is the second**, so a **positive log2 fold change** means higher estimated expression at 4 months.
+The order matters: **Month 1 is the first condition and Month 4 is the second**, so a **positive log2 fold change** means higher estimated expression at 4 months. `scripts/09_run_cuffdiff.sh` specifies these groups in that order.
 
 ### A Bash error I made
 
@@ -94,112 +104,98 @@ For this comparison, log2FC of **+1** corresponds to approximately twice the est
 cut -f7 gene_exp.diff | sort | uniq -c
 ```
 
-This returned (excluding the header):
-
-| Status | Records |
-|---|---:|
-| `OK` | 14,233 |
-| `NOTEST` | 59 |
-| `HIDATA` | 1 |
-| **Total** | **14,293** |
-
-Not all records received a usable test. I use the `OK` status when reviewing individual results.
+The current file has 14,214 gene records: 14,130 with `status == "OK"`, 82 with `status == "NOTEST"`, and 2 with `status == "FAIL"`. Not all records receive a usable test, so I require `status == "OK"` when applying statistical filters.
 
 ## Counting significant results
 
-The `significant` flag is in column 14, and log2FC is in column 10. I used these commands from the `results/Cuffdiff/` directory:
+The `significant` flag is in column 14, and log2FC is in column 10. These examples assume I run them from `$CUFFDIFF_DIR`:
 
 ```bash
 # Significant gene records
-awk -F '\t' '$14 == "yes"' gene_exp.diff | wc -l
-
-# Higher expression at Month 4
-awk -F '\t' '$14 == "yes" && $10 > 0' gene_exp.diff | wc -l
-
-# Lower expression at Month 4
-awk -F '\t' '$14 == "yes" && $10 < 0' gene_exp.diff | wc -l
+awk -F '\t' 'NR > 1 && $7 == "OK" && $14 == "yes"' gene_exp.diff | wc -l
 
 # Significant isoform records
-grep -c $'\tyes$' isoform_exp.diff
+awk -F '\t' 'NR > 1 && $7 == "OK" && $14 == "yes"' isoform_exp.diff | wc -l
 ```
 
-Results recorded from the previous local run:
+I use `status == "OK"` and `significant == "yes"` for both the gene- and isoform-level totals. The current results are:
 
-| Result | Count |
+| Result | Current count |
 |---|---:|
-| Significant gene records | **265** |
-| Upregulated at Month 4 | **63** |
-| Downregulated at Month 4 | **202** |
-| Significant isoform records | **212** |
-
-The directions add up: **63 + 202 = 265**. Gene-level and isoform-level counts are different quantities; 212 significant isoforms does not mean 212 of the 265 genes.
+| Gene records / unique gene IDs | 14,214 |
+| `status == "OK"` | 14,130 |
+| `status == "NOTEST"` | 82 |
+| `status == "FAIL"` | 2 |
+| Significant genes | 261 |
+| Significant genes with positive `log2(fold_change)` | 60 |
+| Significant genes with negative `log2(fold_change)` | 201 |
+| Isoform records | 20,989 |
+| Significant isoforms | 207 |
 
 ## Trying other log2FC cutoffs
 
-The instructor also showed how to combine an unadjusted p-value threshold with a minimum absolute log2FC:
+The instructor also showed how to combine a usable-test status, an unadjusted p-value threshold, and a minimum absolute log2FC. These filters are exploratory and are not the same as the q-value-based significance flag:
 
 ```bash
 # p < 0.05 and |log2FC| > 0.5
-awk -F '\t' '$7 == "OK" && ($10 < -0.5 || $10 > 0.5) && $12 < 0.05' gene_exp.diff | wc -l
+awk -F '\t' 'NR > 1 && $7 == "OK" && $12 < 0.05 && ($10 < -0.5 || $10 > 0.5)' gene_exp.diff | wc -l
 
 # p < 0.05 and |log2FC| > 1
-awk -F '\t' '$7 == "OK" && ($10 < -1 || $10 > 1) && $12 < 0.05' gene_exp.diff | wc -l
+awk -F '\t' 'NR > 1 && $7 == "OK" && $12 < 0.05 && ($10 < -1 || $10 > 1)' gene_exp.diff | wc -l
 ```
 
-| Filter | My count |
-|---|---:|
-| p < 0.05 and \|log2FC\| > 0.5 | **507** |
-| p < 0.05 and \|log2FC\| > 1 | **131** |
-
-The counts above are historical. The original `gene_exp.diff` file is not included in the repository, so the 0.5 cutoff should be recalculated with the corrected filter. The repository summary script uses `status == "OK"` for the 1.0 cutoff and is recorded as returning 131; verify that value against the current result file before relying on it.
-
-I initially made a mistake with the second filter: I wrote `$10 <= 1 || $10 > 1`, which covers essentially every numeric log2FC and returned **1,362** rows. The intended condition is `$7 == "OK" && ($10 < -1 || $10 > 1) && $12 < 0.05`. This was a useful reminder to check logical conditions before interpreting a count.
+On the current result file, these filters return 501 and 119 records, respectively. In my troubleshooting notes, I keep the incorrect predicate `($10 <= 1 || $10 > 1)`: every numeric fold change satisfies one side of this OR, so the expression does not impose an effect-size threshold. With `status == "OK"` and `p_value < 0.05`, this incorrect predicate returns 1,365 records in the current file. The corrected conditions above require values below the negative cutoff or above the positive cutoff.
 
 These **p-value filters are exploratory**. They are not the same as selecting genes significant after multiple-testing correction with the Cuffdiff2 `q_value`/`significant` flag.
 
 ## Looking at individual genes
 
-I sorted significant results by log2FC:
+I sorted current significant results by `log2(fold_change)`:
 
 ```bash
 # Largest positive changes
-awk -F '\t' '$14 == "yes" && $7 == "OK"' gene_exp.diff | sort -k10,10nr | head -n 10
+awk -F '\t' 'NR > 1 && $14 == "yes" && $7 == "OK"' gene_exp.diff | sort -k10,10nr | head -n 10
 
 # Largest negative changes
-awk -F '\t' '$14 == "yes" && $7 == "OK"' gene_exp.diff | sort -k10,10n | head -n 10
+awk -F '\t' 'NR > 1 && $14 == "yes" && $7 == "OK"' gene_exp.diff | sort -k10,10n | head -n 10
 ```
 
-Some genes from the output:
+The current result file has these gene-symbol matches. I retain `gene_id` because one symbol can correspond to multiple Cuffdiff2 records:
 
-| Gene | log2FC | q-value |
-|---|---:|---:|
-| `Il33` | +1.84754 | 0.00508321 |
-| `Cd74` | +1.66516 | 0.00508321 |
-| `Serpinb1a` | +1.24378 | 0.00508321 |
-| `Eln` | −2.41140 | 0.00918258 |
-| `Col3a1` | −2.03349 | 0.00508321 |
-| `Enpp6` | −1.91252 | 0.00508321 |
-| `Gsn` | −1.71437 | 0.00508321 |
-| `Xist` | −1.70287 | 0.00508321 |
+| Gene | `gene_id` | `log2(fold_change)` | `q_value` | `significant` |
+|---|---|---:|---:|---|
+| `Il33` | `chr19.103137` | 1.84387 | 0.00494056 | yes |
+| `Cd74` | `chr18.100510` | 1.60748 | 0.00494056 | yes |
+| `Serpinb1a` | `chr13.77419` | 1.23373 | 0.00494056 | yes |
+| `Eln` | `chr5.34342` | −1.61125 | 0.00494056 | yes |
+| `Eln` | `chr5.34345` | −2.40070 | 0.00883125 | yes |
+| `Col3a1` | `chr1.1658` | −1.27127 | 0.305538 | no |
+| `Col3a1` | `chr1.1659` | −1.73993 | 0.750991 | no |
+| `Col3a1` | `chr1.1662` | −1.09552 | 0.429232 | no |
+| `Col3a1` | `chr1.1663` | −1.00874 | 0.822282 | no |
+| `Col3a1` | `chr1.1664` | −1.98925 | 0.00494056 | yes |
+| `Enpp6` | `chr8.50741` | −1.88641 | 0.00494056 | yes |
+| `Gsn` | `chr2.8576` | −1.71598 | 0.00494056 | yes |
+| `Xist` | `chrX.106929` | −1.70467 | 0.00494056 | yes |
 
-I have not investigated these genes in detail yet. One result I want to check carefully is **Xist**, because its expression can be strongly related to sex. The selected groups may differ in sex composition, which complicates an age-only interpretation. This is a course comparison, not enough evidence on its own for a biological conclusion about development.
+Both current `Eln` records are significant. Of the five `Col3a1` records, only `chr1.1664` is significant. These gene-level observations are descriptive; the unequal sex composition limits an age-only interpretation.
 
 ## Keeping a short summary
 
-I created `scripts/10_summarize_cuffdiff.sh` so I would not need to type the counting commands every time. To print its output and save it:
+I use `scripts/10_summarize_cuffdiff.sh` to summarize the current result file:
 
 ```bash
 source configs/paths.sh
 ./scripts/10_summarize_cuffdiff.sh | tee "${CUFFDIFF_DIR}/cuffdiff_summary.txt"
 ```
 
-The previous summary reported **265 significant genes**, **212 significant isoforms**, **63 upregulated genes**, **202 downregulated genes**, and **131 records** with p < 0.05 and |log2FC| > 1. These values have not been rechecked against the current result files.
+The current verified totals are **261 significant genes** (60 positive and 201 negative) and **207 significant isoforms**. The script also prints p-value and direction summaries; I cross-check them against the status-aware filters and source tables above before reporting them. `tee` overwrites `cuffdiff_summary.txt`, so I check the destination before saving.
 
-## What I want to do next
+## Interpretation and next steps
 
-- Check the sample metadata, particularly the sex of each animal.
-- Compare the Cuffdiff2 results with **DESeq2** using an appropriate gene-level count matrix.
-- Decide which output tables and QC summaries are useful to keep as small reproducible examples in the GitHub repository.
+- A positive log2 fold change means higher estimated expression at 4mo than at 1mo; it is not evidence of causality.
+- Cuffdiff2 and DESeq2 use different statistical methods and model specifications. I compare their gene IDs and effect directions in Note 04 rather than treating their p-values as interchangeable.
+- The sex distribution is unbalanced (three females and no males at 1mo; one female and two males at 4mo), which limits an age-only interpretation.
 
 ## Command reference — how the Bash analysis works
 
@@ -254,7 +250,7 @@ cut -f7 gene_exp.diff | sort | uniq -c
 ### `awk` filters: significance and direction
 
 ```bash
-awk -F '\t' '$14 == "yes" && $10 > 0' gene_exp.diff | wc -l
+awk -F '\t' 'NR > 1 && $7 == "OK" && $14 == "yes" && $10 > 0' gene_exp.diff | wc -l
 ```
 
 - `awk` processes one record at a time.
@@ -264,13 +260,13 @@ awk -F '\t' '$14 == "yes" && $10 > 0' gene_exp.diff | wc -l
 - `$10 > 0` selects positive log2FC, so higher estimated expression in **Month 4 compared with Month 1**.
 - `wc -l` counts how many matching rows the preceding command printed.
 
-For downregulated results I change only `> 0` to `< 0`:
+For negative log2 fold changes I change only `> 0` to `< 0`:
 
 ```bash
-awk -F '\t' '$14 == "yes" && $10 < 0' gene_exp.diff | wc -l
+awk -F '\t' 'NR > 1 && $7 == "OK" && $14 == "yes" && $10 < 0' gene_exp.diff | wc -l
 ```
 
-A shortcut is `grep -c $'\tyes$' gene_exp.diff`, which counts lines ending with a tab followed by `yes`. It relies on the file format; selecting column 14 with `awk` is clearer when I need to combine conditions.
+A shortcut is `grep -c $'\tyes$' gene_exp.diff`, which counts lines ending with a tab followed by `yes`. It relies on the file format and does not check the status column; selecting fields with `awk` is clearer for the reported counts.
 
 ### Combining p-value with a log2FC cutoff
 
@@ -289,7 +285,7 @@ I once typed `($10 <= 1 || $10 > 1)`. For numeric values, that condition covers 
 awk -F '\t' '$7 == "OK" && ($10 < -1 || $10 > 1) && $12 < 0.05' gene_exp.diff | wc -l
 ```
 
-The historical result was **131**, while the ±0.5 filter returned **507**. Recalculate both with the corrected commands when `gene_exp.diff` is available. These counts are *not* FDR-controlled findings because they use `p_value`, not `q_value`.
+These filters are *not* FDR-controlled because they use `p_value`, not `q_value`.
 
 ### Sorting and previewing candidate genes
 
@@ -309,11 +305,11 @@ Sorting by log2FC is exploratory. I should also inspect expression levels and ad
 ### Saving filtered results and summaries
 
 ```bash
-awk -F '\t' 'NR == 1 || ($14 == "yes" && $10 > 0)' gene_exp.diff > genes_upregulated.tsv
+awk -F '\t' 'NR == 1 || ($7 == "OK" && $14 == "yes" && $10 > 0)' gene_exp.diff > genes_upregulated.tsv
 ```
 
 - `NR` is the current input record number; `NR == 1` preserves the header.
-- `>` **creates or overwrites** the output file. It will replace a previous `genes_upregulated.tsv`.
+- `>` **creates or overwrites** the output file. It will replace an existing `genes_upregulated.tsv`.
 - `>>` would append instead; I generally do **not** want it for a full filtered table because I might create duplicate results by rerunning the command.
 
 ```bash
@@ -329,19 +325,17 @@ source configs/paths.sh
 ### Checks I want to repeat before interpreting results
 
 ```bash
-head -n 1 results/Cuffdiff/gene_exp.diff | tr '\t' '\n' | nl -ba
-cut -f7 results/Cuffdiff/gene_exp.diff | sort | uniq -c
-ls -lh results/Cuffdiff/gene_exp.diff
+source configs/paths.sh
+head -n 1 "${CUFFDIFF_DIR}/gene_exp.diff" | tr '\t' '\n' | nl -ba
+cut -f7 "${CUFFDIFF_DIR}/gene_exp.diff" | sort | uniq -c
+ls -lh "${CUFFDIFF_DIR}/gene_exp.diff"
 ```
 
-These paths reflect the previous local layout. In the current configuration, use `$CUFFDIFF_DIR` for the result-file location. The checks verify column order, test statuses and file presence; they do not prove that the experimental design is free of confounding factors. Inspect the sex metadata before interpreting the Month 1/Month 4 difference biologically.
+These checks use the configured output path. They verify column order, test statuses and file presence; they do not prove that the experimental design is free of confounding factors. Inspect the sex metadata before interpreting the Month 1/Month 4 difference biologically.
 
-## Next Steps
+## Related notes
 
-After the Cuffdiff2 analysis, I continued with DESeq2 to analyze differential gene expression using read counts.
-
-The next note covers BAM sorting, gene counting, DESeq2 normalization, gene name annotation, filtering, and the use of biological sex as a covariate.
-
-See [Note 3 — DESeq2 Differential Expression](03_deseq2_differential_expression.md).
+- [Note 03 — DESeq2 differential expression](03_deseq2_differential_expression.md) describes the genome-wide unadjusted DESeq2 workflow and its input count matrix.
+- [Note 04 — Sex-adjusted DESeq2 and method comparison](04_sex_adjusted_deseq2_and_method_comparison.md) compares verified gene-level results and explains the limits of that comparison.
 
 *Based on the Johns Hopkins University Coursera exercise, with local adaptations and results from my own run.*

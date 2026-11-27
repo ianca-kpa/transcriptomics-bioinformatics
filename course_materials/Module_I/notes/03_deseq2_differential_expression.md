@@ -7,7 +7,24 @@
 
 I continued with the same six RNA-seq samples used for STAR, PsiCLASS and Cuffdiff2. For this part of the course, I followed the DESeq2 exercise and changed the paths and a few settings to run it locally.
 
-**Path and result provenance:** The `results/...` paths and D: references below describe my previous local layout. The current scripts source `configs/paths.sh`; for example, `scripts/13_run_deseq2.R` writes under `$BASEDIR/results-proj1/DESeq2/`. The numerical results are from the original local run and were not regenerated during this review; the sex-adjusted analysis is still pending verification.
+**Workflow and result provenance:** I keep the regional Proj1 analysis separate from the current genome-wide analysis. Proj1 contains 142 loci and was performed through the RNA-seq notebook; the current unadjusted genome-wide run contains 14,214 genes and 249 genes with `padj <= 0.05`. These workflows have different gene universes, so I do not combine their results.
+
+Script 13 has completed successfully; its results are available under
+`$BASEDIR/DESeq2_genomewide/unadjusted/`. It reads a pre-existing genome-wide raw-count
+matrix and does not recount BAMs. Script 13b has been corrected to target
+`$BASEDIR/DESeq2_genomewide/sex_adjusted/`, but has not been rerun, so that corrected
+script has not produced results there. The previously verified sex-adjusted results
+remain under the legacy `$BASEDIR/results-proj1/DESeq2/Results/` path. Rerunning script
+13b is optional for improving reproducibility, not a prerequisite for the existing
+exploratory comparison.
+
+## Step-by-step workflow for the current unadjusted analysis
+
+1. Validate the existing raw-count matrix and metadata: 14,214 unique gene IDs, six expected samples, integer raw counts, and matching sample order.
+2. Set `~ condition`, use `1mo` as the reference, and define the contrast as `4mo` versus `1mo`.
+3. The completed run used `Rscript scripts/13_run_deseq2.R` from the repository root. Script 13 imported the matrix; it did not recount BAMs or run `summarizeOverlaps()`. Its output directory now exists, so the overwrite safeguard prevents simply rerunning it there.
+4. Review the complete results, filtered tables, normalized counts, PCA, volcano plot, and analysis summary in `$BASEDIR/DESeq2_genomewide/unadjusted/`.
+5. Confirm the exported raw counts match the input, then interpret the genome-wide results separately from the regional Proj1 analysis.
 
 The six samples are:
 
@@ -20,18 +37,30 @@ The six samples are:
 
 ## 1. Preparing BAM files for gene counting
 
+This section records the earlier genome-wide BAM-sorting exercise in scripts 11 and 12.
+Those scripts read coordinate-sorted STAR BAMs from `STAR_BAM_DIR` and write
+queryname-sorted BAMs to `SORTED_BAM_DIR`, as defined in `configs/paths.sh`. In the
+current configuration, these resolve to `$BASEDIR/STAR/BAM/` and
+`$BASEDIR/results-proj1/Sorted/`, respectively. The BAMs currently stored in
+`results-proj1/Sorted/` are regional Proj1 data; their presence there does not establish
+that they are the outputs of the earlier genome-wide sorting exercise. Since the
+configured destination is now used for regional BAMs, I would not rerun script 11 with
+this configuration without first choosing a separate output directory. Script 13 does
+not use BAMs directly; it reads the existing count matrix. Script 13b uses the original
+coordinate-sorted STAR BAMs.
+
 STAR produced BAM files sorted by genomic coordinate, for example:
 
 ```text
-results/STAR/BAM/SRR3734796_Aligned.sortedByCoord.out.bam
+$BASEDIR/STAR/BAM/SRR3734796_Aligned.sortedByCoord.out.bam
 ```
 
-For this exercise, I also created **queryname-sorted** BAM files using SAMtools:
+The historical destination for that genome-wide sorting exercise is not confirmed. This is an illustrative syntax example only; do not run it with the current `SORTED_BAM_DIR`, which points to the regional `results-proj1/Sorted/` directory:
 
 ```bash
-samtools sort -n -@ 2 -O BAM \
-    -o results/Sorted/SRR3734796.so.bam \
-    results/STAR/BAM/SRR3734796_Aligned.sortedByCoord.out.bam
+/usr/bin/samtools sort -n -@ 2 -O BAM \
+    -o "${GENOMEWIDE_SORTED_DIR}/SRR3734796.so.bam" \
+    "${STAR_BAM_DIR}/SRR3734796_Aligned.sortedByCoord.out.bam"
 ```
 
 - `sort` rearranges alignment **records**; it does not realign reads or change their genomic coordinates.
@@ -40,33 +69,42 @@ samtools sort -n -@ 2 -O BAM \
 - `-@ 2` requests two additional processing threads.
 - `-O BAM` specifies BAM output; `-o` gives the destination file.
 
-A useful example from the actual data was **`SRR3734796.sra.8`**, which had two reported alignments:
+A useful genome-wide multimapping example was **`SRR3734796.sra.8`**, which had two reported alignments:
 
 | Read | Genomic position | Note |
 | --- | --- | --- |
 | `SRR3734796.sra.8` | chr1:95426560 | Primary alignment, FLAG 0 |
 | `SRR3734796.sra.8` | chr8:71348574 | Secondary reverse-strand alignment, FLAG 272 |
 
-Sorting by QNAME keeps these records together. Coordinate sorting places them according to their genomic locations. The read was reported as mapping to two locations (`NH:i:2`); this illustrates **multimapping**.
+Sorting by QNAME keeps these records together. Coordinate sorting places them according
+to their genomic locations. The read was reported as mapping to two locations
+(`NH:i:2`); this illustrates **multimapping**. Because the alignments are on chr1 and
+chr8, this example cannot come from the current chr7-only regional BAMs in
+`results-proj1/Sorted/`.
 
 Scripts:
 
 - `scripts/11_sort_bam_by_read_name.sh`
 - `scripts/12_check_sorted_bam.sh`
 
-I checked all six output BAMs with `samtools quickcheck` and inspected their headers for `SO:queryname`. These checks showed that the files were readable and marked as queryname-sorted. They do not check every record individually.
+Script 12 checks the six queryname-sorted files in the configured `SORTED_BAM_DIR` using
+`samtools quickcheck` and verifies that their headers declare `SO:queryname`. These
+checks establish basic file integrity and sort-order metadata, but do not verify every
+record, genomic scope or the provenance of files currently in that directory. Neither
+the regional BAMs there now nor these sorting scripts are inputs to the current script
+13.
 
 ## 2. From alignments to a gene-count matrix
 
 DESeq2 uses a matrix of **raw gene counts** rather than the FPKM-style expression estimates produced by Cuffdiff2.
 
-The gene annotation came from the PsiCLASS step:
+The gene annotation came from the genome-wide PsiCLASS step:
 
 ```text
-results/PsiCLASS/WithGeneNames/psiclass_vote.withStrand.gtf
+$BASEDIR/PsiCLASS/WithGeneNames/psiclass_vote.withStrand.gtf
 ```
 
-The R script constructs a transcript database, groups exons by gene, and counts alignments overlapping those gene features:
+The raw-count matrix used by the current unadjusted analysis was generated from the genome-wide BAMs during an earlier execution of the sex-adjusted workflow. Counting happened before DESeq2 fitted the sex-adjusted model: the R script constructed a transcript database, grouped exons by gene and counted alignments overlapping those features:
 
 ```r
 hse <- txdbmaker::makeTxDbFromGFF(ANNOT, format = "gtf")
@@ -93,27 +131,35 @@ What each argument does:
 - **`ignore.strand = TRUE`:** strand is not considered when assigning reads to genes. This is an analysis setting and should match the library preparation for a different dataset.
 - **`yieldSize = 100000`:** processes the BAM data in chunks.
 
-The raw counts were exported as:
+This workflow history does not mean that the matrix contains sex-adjusted values. `summarizeOverlaps()` produces raw counts; sex is a covariate in the subsequent statistical model, not a transformation of those counts. The current script 13 does not run this counting code. It reads the existing matrix at:
 
 ```text
-results/DESeq2/Results/raw_counts.1mo_4mo.psiclass.csv
+$BASEDIR/results-proj1/DESeq2/Results/raw_counts.1mo_4mo.A.psiclass.csv
 ```
 
-I had to call `makeTxDbFromGFF()` through **`txdbmaker`** in my installed Bioconductor version. The GTF file and the rest of the counting approach stayed the same.
+Although this source file is stored under the legacy `results-proj1/DESeq2/` path, its 14,214 gene IDs match the genome-wide PsiCLASS annotation and the prior adjusted result table. Its values are raw integer counts exported before DESeq2 model fitting; they were not adjusted for sex. The new unadjusted run exported an identical count matrix to `$BASEDIR/DESeq2_genomewide/unadjusted/Results/raw_counts.1mo_4mo.psiclass.csv`.
+
+I had to call `makeTxDbFromGFF()` through **`txdbmaker`** in my installed Bioconductor version. The GTF file and the rest of the earlier counting approach stayed the same.
 
 ## 3. Metadata and the first design
 
-The initial phenotype file, `pheno_1mo_4mo.csv`, contains `sampleID` and `condition`. In the instructor's R script the matching expression refers to `sampleInfo$sample`, whereas the supplied CSV header is `sampleID`. My local adaptation matches on `sampleInfo$sampleID`, which is consistent with the metadata file. Its sample IDs match the name-sorted BAM filenames, such as `SRR3734796.so.bam`.
+The current scripts use `$BASEDIR/results-proj1/DESeq2/pheno_1mo_4mo.w-sex.csv`, which contains `sampleID`, `condition` and `sex`. Each `sampleID` is a full STAR BAM basename, such as `SRR3734796_Aligned.sortedByCoord.out.bam`. Script 13 extracts the SRA accession from the count-matrix and metadata names, matches on that accession, and reorders the metadata to the count columns. Script 13b matches the selected BAM basenames directly. Both preserve the original sample names for traceability.
+
+In the initial course exercise, I also encountered a mismatch between the instructor script's `sampleInfo$sample` reference and a CSV header named `sampleID`. That was a course-file adaptation issue; it is not the metadata mapping used by the current genome-wide scripts.
 
 Before modeling, the metadata rows must be matched to the count-matrix columns. Otherwise, the wrong condition could be assigned to a sample.
 
-The original analysis uses:
+The current unadjusted analysis constructs the dataset from the existing raw-count matrix:
 
 ```r
-dds <- DESeqDataSet(se, design = ~ condition)
+dds <- DESeq2::DESeqDataSetFromMatrix(
+    countData = count_matrix,
+    colData = sampleInfo,
+    design = ~ condition
+)
 dds$condition <- relevel(dds$condition, ref = "1mo")
-dds <- DESeq(dds)
-res <- results(dds, contrast = c("condition", "4mo", "1mo"))
+dds <- DESeq2::DESeq(dds)
+res <- DESeq2::results(dds, contrast = c("condition", "4mo", "1mo"))
 ```
 
 - `design = ~ condition` models differences between age groups without other covariates.
@@ -124,10 +170,10 @@ The count-based model is fitted by DESeq2, which estimates normalization factors
 
 ## 4. Understanding the result columns
 
-The original result table is:
+The current unadjusted result table is:
 
 ```text
-results/DESeq2/Results/results_1mo_4mo.psiclass.csv
+$BASEDIR/DESeq2_genomewide/unadjusted/Results/results_1mo_4mo.psiclass.csv
 ```
 
 | Field | Meaning |
@@ -139,59 +185,36 @@ results/DESeq2/Results/results_1mo_4mo.psiclass.csv
 | `pvalue` | Unadjusted p-value |
 | `padj` | P-value adjusted for multiple testing, using Benjamini–Hochberg by default |
 
-`baseMean >= 10` does **not** mean every sample has at least 10 reads. It means the mean normalized count across samples meets that threshold.
+Applying a `baseMean` threshold does **not** mean every sample must have that many reads. `baseMean` is the mean of normalized counts across samples.
 
 A small p-value by itself is not enough to control multiple testing across thousands of genes. I use `padj` when interpreting statistically supported differential expression, while retaining the unadjusted p-value for the course's filtering exercise.
 
-### Results from my original DESeq2 run
+### Results from the current genome-wide unadjusted run
 
-These are saved results from the original run, not a fresh analysis. The count matrix and result files are stored outside the repository, so the numbers below could not be independently reproduced during this review.
+I reused the existing genome-wide raw-count matrix described above. I verified the result counts against the full result table and analysis summary, and confirmed that the exported raw counts are identical to the input matrix.
 
 | Result | Genes |
 | --- | ---: |
-| Total genes in results table | 14,293 |
-| `pvalue <= 0.05` | 1,328 |
-| `padj <= 0.05` | 271 |
-| Upregulated among `padj <= 0.05` | 77 |
-| Downregulated among `padj <= 0.05` | 194 |
+| Total genes in results table | 14,214 |
+| `pvalue <= 0.05` | 1,313 |
+| `padj <= 0.05` | 249 |
+| Positive `log2FoldChange` among `padj <= 0.05` | 67 |
+| Negative `log2FoldChange` among `padj <= 0.05` | 182 |
+| Missing `pvalue` | 25 |
+| Missing `padj` | 1,126 |
 
-My totals are different from the instructor's. The PsiCLASS annotation and counting settings may help explain the difference, but I have not tested that yet. Cuffdiff2 and DESeq2 also gave similar numbers of significant genes; I still need to check whether they identified the same genes.
+The script uses `results()` with its default settings. I do not assign an unverified cause to every missing p-value or adjusted p-value. In the exported table, 24 of the 25 rows with missing p-values have zero `baseMean`; one has a nonzero `baseMean`, and its cause is not established by the exported results. Missing adjusted p-values can arise under DESeq2's default independent filtering, but the exported table does not identify the reason for every missing value.
 
 The script also exports normalized counts, a PCA plot and a volcano plot. The PCA uses a variance-stabilizing transformation (`vst`) to explore sample relationships. The volcano plot combines log2 fold change and statistical significance. These plots are exploratory and do not remove confounding by sex.
 
 Script: `scripts/13_run_deseq2.R`  
-Summary script: `scripts/14_summarize_deseq2.sh`
+Current output directory: `$BASEDIR/DESeq2_genomewide/unadjusted/`
 
 ## 5. Adding annotated gene names
 
-The first DESeq2 tables use PsiCLASS gene identifiers, which are not always easy to interpret biologically. The course provides `add_gn_name`, a Perl program that reads gene names from the annotation and adds them to the output tables.
+The DESeq2 result tables use PsiCLASS gene IDs, which can be difficult to interpret biologically. The course provides `add_gn_name`, a Perl program that reads names from the annotation and adds them to a table; this step annotates results but does not rerun DESeq2.
 
-I kept the five original tables in:
-
-```text
-results/DESeq2/Results/
-```
-
-And generated annotated copies in:
-
-```text
-results/DESeq2/Results/WithGeneNames/
-```
-
-Example:
-
-```text
-results_1mo_4mo.psiclass.csv
-        ↓
-gn_results_1mo_4mo.psiclass.csv
-```
-
-The prefix **`gn_`** identifies files with an added gene-name column. This only adds gene names to the tables. It does not rerun DESeq2.
-
-Script: `scripts/15_add_gene_names.sh`  
-Course reference: `docs/com.add_gn_name` and `docs/add_gn_name`
-
-For the `gn_results_1mo_4mo.psiclass.csv` file, the inspected column order was:
+The `gn_` prefix identifies a file with an added gene-name column. When I use such a table, I inspect its header and column order before filtering. In the annotated table I inspected, the order was:
 
 ```text
 1: gene name       2: gene ID
@@ -200,51 +223,30 @@ For the `gn_results_1mo_4mo.psiclass.csv` file, the inspected column order was:
 7: pvalue          8: padj
 ```
 
-When I read the CSV with `check.names = FALSE`, the first two column headers appeared blank. I therefore checked the column order before filtering with `awk`. I checked the uploaded annotated tables: they contain 14,293 data rows, with a gene name and PsiCLASS gene ID in the first two columns. Some names are still labeled `novel_...`, which is expected for transcripts without a familiar gene symbol; adding a column does not guarantee a recognized gene name for every entry.
+When I read an annotated CSV with `check.names = FALSE`, the first two column headers can appear blank, so checking the field order matters. Some names may be labeled `novel_...`; adding a name column does not guarantee a familiar gene symbol for every entry.
+
+The current script 13 outputs are not gene-name annotated. `scripts/15_add_gene_names.sh` reads and writes through `DESEQ2_RESULTS_DIR`, which is configured for the legacy Proj1 results directory. I do not treat that script as part of the current genome-wide workflow unless its paths are deliberately adapted.
+
+Course references: `docs/com.add_gn_name` and `docs/add_gn_name`.
 
 ## 6. Testing different expression filters
 
-The instructor showed how the number of selected genes changes when applying thresholds to expression level, fold change and significance. I reproduced this exercise with `scripts/16_filter_deseq2.sh`.
+I can narrow a result table using expression level, effect size and statistical significance, but I keep these criteria conceptually separate:
 
-Values tested:
+- `baseMean` is the mean of normalized counts across samples; it is not a minimum count required in every sample.
+- An absolute `log2FoldChange` threshold selects changes in either direction. A larger absolute value represents a larger estimated effect.
+- `pvalue` is unadjusted. `padj` accounts for multiple testing and is the significance measure I use for the current genome-wide result summary.
 
-- Minimum `baseMean`: 0, 10, 15
-- Minimum **absolute** log2 fold change: 0, 0.5, 1
-- Significance: `pvalue <= 0.05` or `padj <= 0.05`
+For the current analysis, I report the verified `pvalue <= 0.05` and `padj <= 0.05` totals above. I do not attach unverified gene counts to additional combinations of `baseMean` and effect-size cutoffs. More restrictive filters produce shorter lists, but that alone does not make a list more biologically valid.
 
-| Minimum baseMean | Minimum \|log2FC\| | p-value <= 0.05 | padj <= 0.05 |
-| ---: | ---: | ---: | ---: |
-| 0 | 0 | 1,328 | 271 |
-| 0 | 0.5 | 362 | 156 |
-| 0 | 1 | 108 | 50 |
-| 10 | 0 | 1,307 | 271 |
-| 10 | 0.5 | **341** | **156** |
-| 10 | 1 | 87 | 50 |
-| 15 | 0 | 1,294 | 271 |
-| 15 | 0.5 | 328 | 156 |
-| 15 | 1 | 74 | 50 |
+After loading the current results table as `res`, I can define the two significance filters while excluding missing values explicitly:
 
-In the video, the instructor obtained about 380 genes with `baseMean >= 10`, `|log2FC| >= 0.5` and unadjusted `pvalue <= 0.05`; my dataset gave **341** with those same cutoffs. I checked all nine rows in my summary against the uploaded `gn_results_1mo_4mo.psiclass.csv`, and the counts match.
-
-The reference files provided with the course show additional examples rather than this whole grid. In `com.deseq-filter`, the instructor applies `baseMean >= 15` and `|log2FC| >= 1` to the complete, p-value-filtered and q-value-filtered files; `deseq.filter` shows a separate example using `baseMean >= 10`, `|log2FC| >= 1` and `pvalue <= 0.05`. My script extends these examples to compare multiple thresholds in one table.
-
-The instructor uses `tr ',' ' '` before `awk` because the exported tables are comma-separated. My script uses `awk -F','` for the same numeric fields instead.
-
-Observations from the table:
-
-1. The `baseMean` cutoff changed the unadjusted-p-value count only slightly and did not change the 271 genes selected by `padj <= 0.05` when applied alone.
-2. The fold-change cutoff made a larger difference: among genes with `padj <= 0.05`, 156 remained at `|log2FC| >= 0.5`, and 50 at `|log2FC| >= 1`.
-3. More restrictive filters produce smaller gene lists, but this alone does not make a list more biologically valid.
-
-For interpretation, `|log2FC| >= 1` represents a change of at least twofold in either direction; `|log2FC| >= 0.5` is about 1.41-fold.
-
-The summary is stored locally at:
-
-```text
-results/DESeq2/Results/deseq_filter_summary.csv
+```r
+pvalue_selected <- !is.na(res$pvalue) & res$pvalue <= 0.05
+padj_selected <- !is.na(res$padj) & res$padj <= 0.05
 ```
 
-I used `awk -F','` in the filtering script to specify the CSV separator. This works with the numeric columns in these particular files, but `awk` is not a general CSV parser when quoted fields can contain commas. For more complex CSVs, I would use R or a dedicated CSV parser.
+The course's `scripts/16_filter_deseq2.sh` demonstrates a grid of filters using comma-separated tables, but it reads and writes through `DESEQ2_RESULTS_DIR`, which is configured for the legacy Proj1 results directory. It is not a source of the current genome-wide results. I use `awk -F','` to specify CSV fields in that script, while remembering that `awk` is not a general CSV parser when quoted fields can contain commas; for complex CSVs, I use R or a dedicated CSV parser.
 
 ## 7. Biological sex as a covariate — follow-up analysis
 
@@ -277,10 +279,8 @@ scripts/13b_run_deseq2_with_sex.R
 
 The instructor's supplied alternative metadata file is `pheno_1mo_4mo.A.csv`, with `sampleID`, `condition` and `sex` (F/F/F/F/M/M for the six samples). My local copy uses a descriptive filename instead:
 
-
-
 ```text
-results/DESeq2/pheno_1mo_4mo.w-sex.csv
+$BASEDIR/results-proj1/DESeq2/pheno_1mo_4mo.w-sex.csv
 ```
 
 For comparison with the course, the adjusted result files are intended to use the `.A.psiclass.csv` suffix, for example:
@@ -289,15 +289,19 @@ For comparison with the course, the adjusted result files are intended to use th
 results_1mo_4mo.A.psiclass.csv
 ```
 
-**Status when writing this note:** I prepared the script and metadata for the sex-adjusted analysis, but I have not checked the `.Rout` or its result tables yet. I will add the gene counts after verifying the run.
+An earlier sex-adjusted execution completed, and its verified `.A` result files remain
+under the legacy `$BASEDIR/results-proj1/DESeq2/Results/` path. The corrected
+`scripts/13b_run_deseq2_with_sex.R` is prepared to write to
+`$BASEDIR/DESeq2_genomewide/sex_adjusted/`, but has not been rerun and has not produced
+results there. Rerunning it is optional for improving reproducibility; it is not a
+prerequisite for the existing exploratory comparison. Any new count matrix from that
+rerun should be checked against the matrix used by the current unadjusted analysis.
 
 ## 8. Course commands compared with the local workflow
 
 The course's `com.deseq` runs `R CMD BATCH deseq_1mo_4mo.R` after loading cluster modules. In my Ubuntu/WSL2 setup, the R packages are installed in the Conda environment rather than loaded through cluster `module load` commands.
 
-The instructor's script exports the raw counts, normalized counts, three DESeq2 result tables, PCA and volcano plot. I retained these core outputs and their names. My local scripts add explicit paths and metadata/sample-order checks; they are adaptations of the course exercise, not identical copies of the original script.
-
-Instead of running each filter separately, I used `16_filter_deseq2.sh` to save the nine combinations in `deseq_filter_summary.csv`. This made it easier to compare the cutoffs.
+The instructor's script exports raw counts, normalized counts, three DESeq2 result tables, PCA and a volcano plot. I retained these core outputs and their names. My local scripts add explicit paths and metadata/sample-order checks; they are adaptations of the course exercise, not identical copies of the original script. The current script 13 reads the pre-existing raw-count matrix instead of recounting BAMs.
 
 ## 9. Problems encountered and fixes
 
@@ -317,7 +321,7 @@ cannot open file 'pheno_1mo_4mo.csv': No such file or directory
 
 Why: `read.csv("pheno_1mo_4mo.csv")` looked in the **current working directory**, not in the script's folder. An earlier version also wrote a stray `raw_counts.1mo_4mo.psiclass.csv` into `Module_I/` before failing.
 
-Fix: define full input/output paths (`PHENO`, `OUTDIR`, `RESULTSDIR`) so execution does not depend on running the script from the results directory. The stray count file should be compared against the expected output before removal.
+Fix: define full input/output paths (`PHENO`, `OUTDIR`, `RESULTSDIR`) so execution does not depend on running the script from the results directory. This was an issue in an earlier script version; the current script validates its inputs before creating output directories and writes to the genome-wide unadjusted destination.
 
 ### `txdbmaker` versus the course code
 
@@ -364,19 +368,31 @@ repository/
 $BASEDIR/
 ├── STAR/BAM/
 ├── PsiCLASS/WithGeneNames/
-└── results-proj1/
-    ├── Sorted/
-    └── DESeq2/
-        └── Results/
+├── results-proj1/
+│   ├── Sorted/  # current regional Proj1 BAMs
+│   └── DESeq2/
+│       └── Results/  # legacy inputs and previously verified sex-adjusted results
+└── DESeq2_genomewide/
+    ├── unadjusted/  # completed script 13 outputs
+    │   └── Results/
+    └── sex_adjusted/  # planned destination; not created, corrected script not rerun
 ```
+
+Script 13 completed successfully, and its outputs are available under
+`$BASEDIR/DESeq2_genomewide/unadjusted/`. The corrected script 13b is prepared to write
+to `$BASEDIR/DESeq2_genomewide/sex_adjusted/`, but has not been rerun; this target
+therefore has no results from the corrected script. The previously verified
+sex-adjusted results remain under `$BASEDIR/results-proj1/DESeq2/Results/`. The
+raw-count matrix and metadata used by script 13 remain read-only inputs at their
+existing legacy paths.
 
 Large BAMs, count tables, and figures are stored under `$BASEDIR` rather than committed. The local `configs/paths.sh` is machine-specific and is not tracked; create it from `configs/paths.example.sh` and set `BASEDIR` for the machine used.
 
 ## Next steps
 
-- Verify the run of `13b_run_deseq2_with_sex.R` and compare its results with the original model.
-- Add gene names to the `.A.psiclass.csv` result files once the sex-adjusted run is confirmed.
-- Examine which gene IDs overlap between the original and adjusted results, not only the total number of significant genes.
+- If improved reproducibility is needed, rerun the corrected `13b_run_deseq2_with_sex.R` and verify that its regenerated raw counts match the matrix used here.
+- Keep any comparison with the previous sex-adjusted output exploratory and compare gene IDs, not only the total number of significant genes.
+- Add gene names to the current outputs only after confirming the annotation and gene-ID mapping for this 14,214-gene universe.
 - Interpret any biological findings in light of the sex imbalance and small sample size.
 
 See [Note 4 — Sex-adjusted DESeq2 and Method Comparison](04_sex_adjusted_deseq2_and_method_comparison.md) for the run prerequisites and comparison checks.

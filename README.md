@@ -1,88 +1,78 @@
 
 # Transcriptomics & Bioinformatics
 
-**RNA-seq | Transcript assembly | Differential expression | Alternative splicing | R | Bash | Python | Reproducible workflows**
+**RNA-seq | Transcript assembly | Differential expression | Alternative splicing | R | Bash | Python**
 
-This repository documents my practical work with the [Bioinformatics Methods for Transcriptomics](https://www.coursera.org/learn/bioinformatics-methods-for-transcriptomics) course, taught by Dr. Liliana Florea at Johns Hopkins University through Coursera.
+This repository is my practical learning portfolio in transcriptomics and bioinformatics. It brings together course exercises, analysis scripts, workflow adaptations, verified results, and notes on methodological limitations.
 
-**Course status:** In progress
+Module I follows [Bioinformatics Methods for Transcriptomics](https://www.coursera.org/learn/bioinformatics-methods-for-transcriptomics), taught by Dr. Liliana Florea at Johns Hopkins University through Coursera. Module II documents work from *Command Line Tools for Transcriptomics*.
+
+**Portfolio status:** In progress
 
 ## About the project
 
 I use this repository to document course exercises, analysis scripts, and the adaptations needed to run transcriptomics workflows locally on Ubuntu/WSL2.
 
-The original exercises were designed for a computing cluster. I reorganized the commands into numbered scripts, introduced configurable data paths, and added checks for input files, BAM integrity, read characteristics, and analysis outputs.
+The original exercises were designed for a computing cluster. I organized commands into numbered scripts, introduced configurable data paths, and added checks for input files, BAM integrity, read characteristics, and analysis outputs.
 
-My notes document the commands I used, problems I encountered, and how I investigated the results. This is a learning project, and I distinguish completed analyses from steps that still require verification.
+My notes document the commands I used, problems I encountered, and how I checked the results. Some runs have incomplete environment provenance, so I distinguish verified results from work that still needs validation or a reproducibility rerun.
 
 ## Modules
 
 | Module | Topic | Status |
 |---|---|---|
-| [Module I](course_materials/Module_I/README.md) | RNA-seq alignment, transcript assembly, and differential expression | Initial analyses completed; some verification items remain |
-| [Module II](course_materials/Module_II/README.md) | Alternative splicing analysis | In progress; initial rMATS analysis completed |
+| [Module I](course_materials/Module_I/README.md) | Genome-wide RNA-seq and a separate regional Final Project | Main genome-wide results verified; corrected sex-adjusted rerun optional |
+| [Module II](course_materials/Module_II/README.md) | Alternative-splicing analysis with rMATS | Initial skipped-exon analysis completed; validation and event review remain |
 
 ## Module I — RNA-seq and Differential Expression
 
-The whole-genome exercise uses six mouse hippocampus RNA-seq runs from [GSE83931](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE83931), comparing samples from 1-month-old and 4-month-old mice.
+The genome-wide workflow uses six mouse hippocampus RNA-seq runs from [GSE83931](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE83931), comparing 1-month-old and 4-month-old mice. The 1mo group contains three female samples; the 4mo group contains one female and two male samples.
 
-The workflow includes:
+I used:
 
 - SRA data retrieval and FASTQ preparation.
 - Read alignment with STAR.
 - Transcript assembly and annotation with PsiCLASS.
 - Differential expression analysis with Cuffdiff2 and DESeq2.
-- Read counting, normalization, and statistical analysis.
-- PCA, volcano plots, and exploration of expression filters.
+- Raw-count matrix reuse, normalization, and statistical analysis with DESeq2.
+- PCA, volcano plots, and data validation.
 
-The previously saved initial DESeq2 run (`~ condition`) reported 271 of 14,293 genes with adjusted p-values ≤ 0.05. These historical outputs were not reproduced during this review; see the [Module I DESeq2 note](course_materials/Module_I/notes/03_deseq2_differential_expression.md).
+### Verified genome-wide results
 
-The comparison has an important limitation: the age groups are not balanced by biological sex. A second DESeq2 script includes sex as a covariate, but its results remain pending verification.
+| Analysis | Model / significance criterion | Verified results |
+|---|---|---|
+| Cuffdiff2 | `status == "OK"` and `significant == "yes"` | 14,214 gene records; 261 significant genes; 207 significant isoforms |
+| DESeq2 unadjusted | `~ condition`; `padj <= 0.05` | 14,214 genes; 249 significant |
+| Previously executed DESeq2 sex-adjusted | `~ sex + condition`; `padj <= 0.05` | 14,214 genes; 124 significant |
 
-Detailed methods, results, and limitations are documented in the [Module I README](course_materials/Module_I/README.md).
+By gene ID, the two DESeq2 models share 85 significant genes. Cuffdiff2 and the previously executed sex-adjusted DESeq2 share 76. These are exploratory comparisons, not evidence of biological validity.
 
-### Module I Final Project
+Script 13 completed the unadjusted analysis by importing an existing raw-count matrix; it did not recount BAMs. The earlier sex-adjusted results are verified, but their execution environment provenance is incomplete. The corrected script 13b has not been rerun and has not produced results in its planned destination.
 
-A separate [Jupyter notebook](course_materials/Module_I/Final_Project/RNAseq_Module_I_Final_Project.ipynb) documents an analysis of approximately 3.4 Mb from mouse chromosome 7.
+Current outputs are under `$BASEDIR/Cuffdiff/` and `$BASEDIR/DESeq2_genomewide/unadjusted/`. The previously verified sex-adjusted results remain under `$BASEDIR/results-proj1/DESeq2/Results/`; the corrected script 13b is prepared for `$BASEDIR/DESeq2_genomewide/sex_adjusted/`. See the [Module I README](course_materials/Module_I/README.md) and [study notes](course_materials/Module_I/notes/) for input paths, workflow details, and provenance.
 
-The workflow includes STAR, PsiCLASS, transcript annotation, Cuffdiff2, and DESeq2.
+### Module I Regional Final Project
 
-The saved DESeq2 output contains 142 loci, including 3 with adjusted p-values ≤ 0.05. These results have not been regenerated with the corrected single-end counting settings; see the [final-project README](course_materials/Module_I/Final_Project/README.md).
+A separate [Jupyter notebook](course_materials/Module_I/Final_Project/RNAseq_Module_I_Final_Project.ipynb) analyzes approximately 3.4 Mb of mouse chromosome 7 and contains 142 loci. This regional workflow is distinct from the genome-wide analyses above.
 
-These regional results are separate from the whole-genome analysis. The input reads are single-end, but the saved count and DESeq2 outputs predate the corrected single-end settings and should be regenerated before interpretation.
+The saved differential-expression outputs have not been regenerated with the corrected single-end counting settings; I do not present them as newly validated results. See the [Final Project README](course_materials/Module_I/Final_Project/README.md).
 
 ## Module II — Alternative Splicing
 
-Module II explores alternative splicing using RNA-seq data from the same mouse hippocampus dataset.
+Module II uses rMATS to explore alternative splicing in the same mouse hippocampus dataset. The Module II STAR workflow covers nine runs across 1-, 2-, and 4-month groups; the current rMATS comparison uses the six 1mo and 4mo samples.
 
-The current rMATS analysis compares three 1-month samples with three 4-month samples.
-
-I added scripts to:
-
-- Validate BAM files before downstream analysis.
-- Examine read length distributions and paired-end alignment flags.
-- Prepare BAM lists for the selected conditions.
-- Run event-level alternative splicing analysis using rMATS.
-- Summarize skipped exon events and export significant results.
-
-### Initial rMATS Results
-
-The junction-count analysis (`SE.MATS.JC.txt`) produced:
+The verified junction-count skipped-exon results are:
 
 | Metric | Result |
 |---|---:|
-| Skipped exon events reported | 20,588 |
-| Events with FDR < 0.05 and \|ΔPSI\| ≥ 0.05 | 111 |
-| Higher exon inclusion at 1 month | 56 |
-| Higher exon inclusion at 4 months | 55 |
+| Skipped-exon events | 20,588 |
+| Events with `FDR < 0.05` and `abs(IncLevelDifference) >= 0.05` | 111 |
+| Higher inclusion in 1mo | 56 |
+| Higher inclusion in 4mo | 55 |
 
-The direction is based on `IncLevelDifference`, calculated as the mean inclusion level in group 1 (1 month) minus that in group 2 (4 months).
+`IncLevelDifference` is the mean inclusion level in group 1 (1mo) minus group 2 (4mo). These are splicing events, not distinct genes.
 
-These are alternative splicing events, not counts of distinct genes.
-
-The analysis remains exploratory. Read-layout validation, full read-length assessment, and the imbalance in biological sex between groups are important considerations before biological interpretation.
-
-Further details are available in the [Module II README](course_materials/Module_II/README.md).
+This analysis remains exploratory. I still need to validate read layout and read lengths across all six samples and review significant events by gene ID and genomic coordinates. The groups are also unbalanced by sex. Further details are in the [Module II README](course_materials/Module_II/README.md) and [rMATS study note](course_materials/Module_II/notes/01_rmats_alternative_splicing.md).
 
 ## Repository Structure
 
@@ -120,40 +110,39 @@ transcriptomics-bioinformatics/
 
 Analysis scripts use paths defined in `configs/paths.sh`, which is machine-specific and excluded from version control.
 
-The repository includes a [configuration example](configs/paths.example.sh). Users can adapt it to their own data storage and software environment.
+The repository includes a [configuration example](configs/paths.example.sh), which I can adapt to local data storage and software environments.
 
 Whole-genome sequencing files, STAR indexes, BAM files, and generated analysis outputs are stored outside Git.
 
 The Module I final-project folder contains the prepared regional teaching dataset and supporting reference files. Redistribution permission for these course-provided files has been confirmed.
 
-See [Environment and execution](course_materials/Module_I/ENVIRONMENT.md) for software dependencies and environment information.
+See [Environment and execution](course_materials/Module_I/ENVIRONMENT.md) for software dependencies and environment information. The scripts organize and document workflows, but the available provenance does not establish fully reproducible end-to-end execution for every analysis.
 
 ## Tools and Technologies
 
-**Programming:** R, Python, Bash.
+**Programming and data handling:** R, Bioconductor, Python, Bash; data manipulation and validation.
 
-**Environment and version control:** Ubuntu/WSL2, Conda, Jupyter, Git/GitHub.
+**Environment and version control:** Linux/WSL2, Conda, Jupyter, Git/GitHub.
 
 **RNA-seq processing:** SRA Toolkit, STAR, SAMtools, PsiCLASS.
 
-**Statistical analysis:** Cuffdiff2, DESeq2, rMATS, Bioconductor.
+**Statistical and event-level analysis:** Cuffdiff2, DESeq2, rMATS; statistical testing and multiple-testing correction.
 
-**Visualization and results:** PCA, volcano plots, differential expression tables, alternative splicing summaries.
+**Visualization and workflow documentation:** PCA, volcano plots, differential-expression tables, alternative-splicing summaries, and documented workflow checks.
 
 ## Limitations and Next Steps
 
-This repository documents practical training rather than a fully validated biological study.
+This repository documents practical learning, not a fully validated biological study. In Module I, there are three female samples and no male samples at 1mo, compared with one female and two males at 4mo. Statistical adjustment for sex does not remove this design limitation.
 
 Current priorities include:
 
-- Verifying sequencing layout and read lengths for downstream analyses.
-- Reviewing the sex-adjusted DESeq2 comparison.
-- Examining significant alternative splicing events at the gene level.
+- Optionally rerunning corrected script 13b and recording its software environment.
+- Validating read layout and read lengths for all six rMATS samples.
+- Reviewing significant splicing events by gene ID and genomic coordinates.
 - Improving environment documentation and workflow portability.
-- Adding selected figures and reproducible result summaries.
 
 ## Acknowledgements
 
-The exercises are based on **Bioinformatics Methods for Transcriptomics**, taught by Dr. Liliana Florea at Johns Hopkins University through Coursera.
+Module I is based on **Bioinformatics Methods for Transcriptomics**, taught by Dr. Liliana Florea at Johns Hopkins University through Coursera. Module II documents work from **Command Line Tools for Transcriptomics**, as described in its module documentation.
 
 This is an independent learning repository, not an official university or Coursera resource.

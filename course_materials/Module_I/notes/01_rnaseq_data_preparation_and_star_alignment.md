@@ -5,6 +5,16 @@
 
 This note covers the six whole-genome SRA runs used in Module I. They are separate from the regional chromosome 7 dataset in `Final_Project/`.
 
+## Step-by-step workflow
+
+1. Confirm the six Module I accessions and their single-end layout in the metadata. `scripts/01_extract_sra_accessions.sh` can extract the table's run IDs for inspection.
+2. Download the six Module I runs with `scripts/02_download_sra.sh`.
+3. Convert those same runs with `scripts/03_convert_sra_to_fastq.sh`, explicitly selecting the Module I list because this script defaults to the nine-run Module II list.
+4. Check that all six expected FASTQ files exist and are non-empty before alignment.
+5. Check the configured index destination, then build the STAR index with `scripts/04_generate_star_index.sh`.
+6. Check the test output path, then run `scripts/05a_test_star_alignment.sh` for one Module I sample; inspect its STAR log and check the BAM with `samtools quickcheck`.
+7. Do not use `scripts/05b_align_all_samples_star.sh` as a six-sample Module I aligner; it is configured for Module II. A reproducible Module I batch-alignment script is still needed.
+
 ## Samples and experimental design
 
 | Condition | SRA runs | Sex |
@@ -40,14 +50,16 @@ fasterq-dump "$SRA_FILE" \
     --threads 4
 ```
 
-Both scripts source `configs/paths.sh`; SRA files are stored under `$BASEDIR/SRA/<run>/<run>.sra`, and `fasterq-dump` writes uncompressed FASTQs under `$BASEDIR/FASTQ/`. To download the Module II list, run:
+Both scripts source `configs/paths.sh`; SRA files are stored under `$BASEDIR/SRA/<run>/<run>.sra`, and `fasterq-dump` writes uncompressed FASTQs under `$BASEDIR/FASTQ/`. For this Module I workflow, run:
 
 ```bash
-SRA_RUNS_FILE=course_materials/Module_II/metadata/selected_runs_m2.txt \
+SRA_RUNS_FILE=course_materials/Module_I/metadata/selected_runs.txt \
     ./scripts/02_download_sra.sh
+SRA_RUNS_FILE=course_materials/Module_I/metadata/selected_runs.txt \
+    ./scripts/03_convert_sra_to_fastq.sh
 ```
 
-The conversion script defaults to that same Module II list. To convert the Module I samples instead, set `SRA_RUNS_FILE` to `course_materials/Module_I/metadata/selected_runs.txt`.
+The download script already defaults to the Module I list, but setting `SRA_RUNS_FILE` explicitly makes both steps use the same six accessions. The conversion script otherwise defaults to the Module II list.
 
 Check that each expected input exists before alignment:
 
@@ -73,9 +85,16 @@ ${BASEDIR}/reference/genome/GRCm39.primary_assembly.genome.fa
 
 The current script uses two threads, `--genomeSAindexNbases 12`, and `--genomeSAsparseD 16`:
 
+The script creates the configured index directory but has no overwrite safeguard. Check the destination before running it again.
+
+```bash
+./scripts/04_generate_star_index.sh
+```
+
+The script reads the FASTA and index directory from `configs/paths.sh`. The equivalent STAR options are:
+
 ```bash
 source configs/paths.sh
-FASTQ_DIR="${BASEDIR}/FASTQ"
 STAR --runThreadN 2 \
     --runMode genomeGenerate \
     --genomeDir "$STAR_INDEX_DIR" \
@@ -89,6 +108,12 @@ The GENCODE M30 annotation is used in later transcript-analysis steps; this inde
 ## Testing STAR alignment
 
 `scripts/05a_test_star_alignment.sh` tests the first 1-month sample, `SRR3734796`. It reads an uncompressed, single-end FASTQ and writes the coordinate-sorted BAM and STAR logs under `${STAR_DIR}/test/`.
+
+The script creates its test directory but has no overwrite safeguard. Check the existing outputs first. From the repository root, run the single-sample test with:
+
+```bash
+./scripts/05a_test_star_alignment.sh
+```
 
 The main STAR options are:
 
